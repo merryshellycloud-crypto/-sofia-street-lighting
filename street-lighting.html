@@ -401,6 +401,9 @@
               <p id="mapDrawingInfo" class="text-xs text-slate-400">Click on a street range, then draw on map</p>
             </div>
             <div class="flex gap-2">
+              <button type="button" id="setEPLocationBtn" onclick="toggleEPLocationMode()" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-white text-xs rounded flex items-center gap-1">
+                <span>📍</span> Set EP Location
+              </button>
               <button type="button" onclick="undoStreetPoint()" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-white text-xs rounded">Undo</button>
               <button type="button" onclick="clearStreetDraw()" class="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-xs rounded">Clear</button>
             </div>
@@ -1103,29 +1106,45 @@ async function recalculateCoordinates() {
   // Build multiple search queries optimized for Sofia, Bulgaria
   const searchQueries = [];
 
+  // Combine address + district for Sofia residential complexes (e.g., "Lyulin" + "5" = "Lyulin 5")
+  const neighborhood = address && district ? `${address} ${district}` : (address || district);
+
   // For residential complexes (жк) with block numbers - most common in Sofia
-  if (district && building) {
-    // Try Bulgarian format first
-    searchQueries.push(`жк ${district} блок ${building}, София, България`);
-    searchQueries.push(`${district} блок ${building}, София`);
-    searchQueries.push(`блок ${building}, ${district}, София`);
+  if (neighborhood && building) {
+    // Try multiple Bulgarian formats - prioritize specific block searches
+    searchQueries.push(`блок ${building}, жк ${neighborhood}, София`);
+    searchQueries.push(`жк ${neighborhood} блок ${building}, София, България`);
+    searchQueries.push(`${neighborhood} блок ${building}, София`);
+    searchQueries.push(`блок ${building}, ${neighborhood}, София`);
+    searchQueries.push(`бл. ${building}, жк ${neighborhood}, София`);
+    // Also try with Cyrillic "Люлин" if user typed "Lyulin"
+    const cyrillicNeighborhood = neighborhood
+      .replace(/Lyulin/i, 'Люлин')
+      .replace(/Mladost/i, 'Младост')
+      .replace(/Nadezhda/i, 'Надежда')
+      .replace(/Druzhba/i, 'Дружба')
+      .replace(/Ovcha Kupel/i, 'Овча Купел')
+      .replace(/Banishora/i, 'Банишора')
+      .replace(/Hipodruma/i, 'Хиподрума')
+      .replace(/Krasno selo/i, 'Красно село')
+      .replace(/Lozenets/i, 'Лозенец')
+      .replace(/Borovo/i, 'Борово');
+    if (cyrillicNeighborhood !== neighborhood) {
+      searchQueries.push(`блок ${building}, жк ${cyrillicNeighborhood}, София`);
+      searchQueries.push(`жк ${cyrillicNeighborhood} блок ${building}, София`);
+    }
   }
 
-  // Street address with building number
-  if (address && building) {
+  // Just neighborhood (residential complex) without specific block
+  if (neighborhood && !building) {
+    searchQueries.push(`жк ${neighborhood}, София, България`);
+    searchQueries.push(`${neighborhood}, София, България`);
+  }
+
+  // Street address with building number (for actual streets, not residential complexes)
+  if (address && building && !district) {
+    searchQueries.push(`ул. ${address} ${building}, София, България`);
     searchQueries.push(`${address} ${building}, София, България`);
-    searchQueries.push(`ул. ${address} ${building}, София`);
-  }
-
-  // Street address only
-  if (address) {
-    searchQueries.push(`${address}, ${district ? district + ', ' : ''}София, България`);
-  }
-
-  // District/neighborhood only
-  if (district) {
-    searchQueries.push(`жк ${district}, София, България`);
-    searchQueries.push(`${district}, София, България`);
   }
 
   // Try each query until we get a result
@@ -1681,13 +1700,19 @@ function initEPDrawMap() {
   // Add EP marker
   updateEPMarker();
 
-  // Click handler to add points
+  // Click handler - either set EP location or add drawing points
   epDrawMap.on('click', (e) => {
-    if (currentDrawingIndex !== null) {
+    if (epLocationMode) {
+      // Set EP location mode
+      setEPLocationFromClick(e.latlng.lat, e.latlng.lng);
+    } else if (currentDrawingIndex !== null) {
+      // Drawing mode for CL routes
       addDrawPoint(e.latlng.lat, e.latlng.lng);
     }
   });
 }
+
+let epLocationMode = false; // When true, clicking map sets EP location instead of drawing
 
 function updateEPMarker() {
   const epLat = parseFloat(document.getElementById('epLat')?.value) || MAP_CENTER[0];
@@ -1697,9 +1722,47 @@ function updateEPMarker() {
     epDrawMap.removeLayer(epMarker);
   }
 
+  // Create draggable marker for EP location
   epMarker = L.marker([epLat, epLng], {
-    icon: createMarkerIcon('#10b981', true)
-  }).addTo(epDrawMap).bindTooltip('EP Location', { permanent: false });
+    icon: createMarkerIcon('#10b981', true),
+    draggable: true
+  }).addTo(epDrawMap);
+
+  epMarker.bindTooltip('EP Location (drag to move)', { permanent: false });
+
+  // Update coordinates when marker is dragged
+  epMarker.on('dragend', (e) => {
+    const pos = e.target.getLatLng();
+    document.getElementById('epLat').value = pos.lat.toFixed(7);
+    document.getElementById('epLng').value = pos.lng.toFixed(7);
+  });
+}
+
+function toggleEPLocationMode() {
+  epLocationMode = !epLocationMode;
+  const btn = document.getElementById('setEPLocationBtn');
+  const info = document.getElementById('mapDrawingInfo');
+
+  if (epLocationMode) {
+    btn.classList.add('bg-emerald-500', 'text-white');
+    btn.classList.remove('bg-slate-700');
+    info.textContent = '📍 Click on map to set EP location';
+    info.classList.add('text-emerald-400');
+  } else {
+    btn.classList.remove('bg-emerald-500', 'text-white');
+    btn.classList.add('bg-slate-700');
+    info.textContent = 'Click on a street range, then draw on map';
+    info.classList.remove('text-emerald-400');
+  }
+}
+
+function setEPLocationFromClick(lat, lng) {
+  document.getElementById('epLat').value = lat.toFixed(7);
+  document.getElementById('epLng').value = lng.toFixed(7);
+  updateEPMarker();
+  epDrawMap.setView([lat, lng], epDrawMap.getZoom());
+  // Turn off location mode after setting
+  if (epLocationMode) toggleEPLocationMode();
 }
 
 function selectCLRangeForDrawing(index) {
