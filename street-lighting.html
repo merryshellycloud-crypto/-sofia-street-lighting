@@ -99,6 +99,10 @@
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
           <span>Groups</span>
         </button>
+        <button onclick="showScreen('electrical-panels')" data-screen="electrical-panels" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+          <span>Electrical Panels</span>
+        </button>
         <button onclick="showScreen('reports')" data-screen="reports" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
           <span>Reports</span>
@@ -227,6 +231,35 @@
         </div>
       </div>
 
+      <!-- Electrical Panels Screen -->
+      <div id="screen-electrical-panels" class="screen hidden p-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- EP List Panel -->
+          <div class="lg:col-span-1 bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-lg font-semibold">Electrical Panels</h3>
+              <button onclick="openEPModal()" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Add EP
+              </button>
+            </div>
+            <input type="text" id="searchEP" placeholder="Search electrical panel..." class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 mb-4">
+            <div id="epList" class="space-y-2 max-h-96 overflow-y-auto"></div>
+          </div>
+          <!-- EP Detail Panel -->
+          <div class="lg:col-span-2 bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
+            <div id="epDetailContent">
+              <div class="h-64 flex items-center justify-center text-slate-500">Select an Electrical Panel to view details</div>
+            </div>
+          </div>
+        </div>
+        <!-- EP Map Preview -->
+        <div class="mt-6 bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
+          <h3 class="text-lg font-semibold mb-4">City Lights Coverage</h3>
+          <div id="epPreviewMap" class="h-72 rounded-lg border border-slate-700"></div>
+        </div>
+      </div>
+
       <!-- Reports Screen -->
       <div id="screen-reports" class="screen hidden p-6">
         <div class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5 mb-6">
@@ -254,6 +287,63 @@
     </main>
   </div>
 
+  <!-- EP Add/Edit Modal -->
+  <div id="epModal" class="fixed inset-0 z-[9999] flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/70" onclick="closeEPModal()"></div>
+    <div class="relative bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h3 id="epModalTitle" class="text-xl font-semibold">Add Electrical Panel</h3>
+        <button onclick="closeEPModal()" class="p-2 hover:bg-slate-700 rounded-lg">
+          <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="epForm" class="space-y-4">
+        <input type="hidden" id="epEditId">
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-2">Panel Name</label>
+          <input type="text" id="epName" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="e.g., Vitosha Blvd Hub" required>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-2">Panel Address</label>
+          <input type="text" id="epAddress" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="e.g., Vitosha Blvd 1, Sofia" required>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-2">Latitude</label>
+            <input type="number" step="any" id="epLat" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="42.6936" required>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-2">Longitude</label>
+            <input type="number" step="any" id="epLng" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="23.3203" required>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-2">Status</label>
+          <select id="epStatus" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-emerald-500">
+            <option value="ok">OK (Online)</option>
+            <option value="warning">Warning</option>
+            <option value="critical">Critical</option>
+            <option value="offline">Offline</option>
+          </select>
+        </div>
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <label class="block text-sm font-medium text-slate-300">City Lights (CL) Street Ranges</label>
+            <button type="button" onclick="addCLRange()" class="text-emerald-400 hover:text-emerald-300 text-sm flex items-center gap-1">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              Add Street
+            </button>
+          </div>
+          <div id="clRangesContainer" class="space-y-3"></div>
+        </div>
+        <div class="flex gap-3 pt-4">
+          <button type="button" onclick="closeEPModal()" class="flex-1 px-4 py-2.5 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700">Cancel</button>
+          <button type="submit" class="flex-1 px-4 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-medium">Save Panel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Confirmation Modal -->
   <div id="confirmModal" class="fixed inset-0 z-[9999] flex items-center justify-center hidden">
     <div class="absolute inset-0 bg-black/70" onclick="closeModal()"></div>
@@ -279,32 +369,60 @@ const STATUS_COLORS = {
   offline: { bg: 'bg-slate-500', text: 'text-slate-400', hex: '#64748b' },
 };
 
+// CL (City Light) state colors for road visualization (same as EP status)
+const CL_STATE_COLORS = {
+  ok: { hex: '#10b981', label: 'OK' },        // Green - working normally
+  warning: { hex: '#f59e0b', label: 'Warning' }, // Amber - warning state
+  critical: { hex: '#ef4444', label: 'Critical' }, // Red - critical/error
+  offline: { hex: '#64748b', label: 'Offline' }  // Gray - offline
+};
+
 const MAP_CENTER = [42.6977, 23.3219];
 
 const cabinets = [
   { id: 'CAB-001', name: 'Vitosha Blvd Hub', status: 'ok', power: 12.4, lastSeen: '2 min ago', area: 'Downtown', circuits: 24,
     coords: [42.6936, 23.3203],
-    street: [[42.6966, 23.3199], [42.6956, 23.3200], [42.6946, 23.3201], [42.6936, 23.3203], [42.6926, 23.3204], [42.6916, 23.3206], [42.6906, 23.3207]]
+    address: 'Vitosha Blvd 1, Sofia',
+    clRanges: [
+      { street: 'Vitosha Blvd', from: 1, to: 33, state: 'ok', coords: [[42.6966, 23.3199], [42.6956, 23.3200], [42.6946, 23.3201], [42.6936, 23.3203], [42.6926, 23.3204], [42.6916, 23.3206], [42.6906, 23.3207]] }
+    ]
   },
   { id: 'CAB-002', name: 'NDK Park Node', status: 'warning', power: 8.7, lastSeen: '5 min ago', area: 'Central Park', circuits: 18,
     coords: [42.6863, 23.3186],
-    street: [[42.6883, 23.3156], [42.6873, 23.3171], [42.6863, 23.3186], [42.6853, 23.3201], [42.6843, 23.3216]]
+    address: 'NDK Square 2, Sofia',
+    clRanges: [
+      { street: 'Bulgaria Blvd', from: 1, to: 25, state: 'warning', coords: [[42.6883, 23.3156], [42.6873, 23.3171], [42.6863, 23.3186], [42.6853, 23.3201], [42.6843, 23.3216]] }
+    ]
   },
   { id: 'CAB-003', name: 'Industrial Zone Alpha', status: 'critical', power: 0, lastSeen: '45 min ago', area: 'Industrial', circuits: 32,
     coords: [42.7150, 23.2850],
-    street: [[42.7180, 23.2820], [42.7165, 23.2835], [42.7150, 23.2850], [42.7135, 23.2865], [42.7120, 23.2880]]
+    address: 'Industrial Blvd 45, Sofia',
+    clRanges: [
+      { street: 'Industrial Blvd', from: 20, to: 60, state: 'critical', coords: [[42.7180, 23.2820], [42.7165, 23.2835], [42.7150, 23.2850], [42.7135, 23.2865], [42.7120, 23.2880]] }
+    ]
   },
   { id: 'CAB-004', name: 'Tsarigradsko Junction', status: 'ok', power: 15.2, lastSeen: '1 min ago', area: 'East Side', circuits: 28,
     coords: [42.6725, 23.3550],
-    street: [[42.6745, 23.3480], [42.6735, 23.3515], [42.6725, 23.3550], [42.6715, 23.3585], [42.6705, 23.3620]]
+    address: 'Tsarigradsko Shose 100, Sofia',
+    clRanges: [
+      { street: 'Tsarigradsko Shose', from: 80, to: 120, state: 'ok', coords: [[42.6745, 23.3480], [42.6735, 23.3515], [42.6725, 23.3550]] },
+      { street: 'Samokov Road', from: 1, to: 15, state: 'ok', coords: [[42.6725, 23.3550], [42.6715, 23.3585], [42.6705, 23.3620]] }
+    ]
   },
   { id: 'CAB-005', name: 'Serdika Terminal', status: 'offline', power: 0, lastSeen: '2 hours ago', area: 'Center', circuits: 20,
     coords: [42.6975, 23.3225],
-    street: [[42.7005, 23.3210], [42.6990, 23.3218], [42.6975, 23.3225], [42.6960, 23.3233], [42.6945, 23.3240]]
+    address: 'Maria Louisa Blvd 18, Sofia',
+    clRanges: [
+      { street: 'Maria Louisa Blvd', from: 1, to: 30, state: 'offline', coords: [[42.7005, 23.3210], [42.6990, 23.3218], [42.6975, 23.3225], [42.6960, 23.3233], [42.6945, 23.3240]] }
+    ]
   },
   { id: 'CAB-006', name: 'Sofia University', status: 'ok', power: 9.8, lastSeen: '30 sec ago', area: 'Campus', circuits: 16,
     coords: [42.6932, 23.3345],
-    street: [[42.6962, 23.3330], [42.6947, 23.3338], [42.6932, 23.3345], [42.6917, 23.3353], [42.6902, 23.3360]]
+    address: 'Tsar Osvoboditel Blvd 15, Sofia',
+    clRanges: [
+      { street: 'Tsar Osvoboditel Blvd', from: 1, to: 20, state: 'ok', coords: [[42.6962, 23.3330], [42.6947, 23.3338], [42.6932, 23.3345]] },
+      { street: 'Vasil Levski Blvd', from: 1, to: 10, state: 'warning', coords: [[42.6932, 23.3345], [42.6917, 23.3353], [42.6902, 23.3360]] }
+    ]
   },
 ];
 
@@ -422,9 +540,11 @@ function renderCabinetList() {
   `).join('');
 }
 
+let currentCLLines = []; // Array to hold multiple CL street lines
+
 function selectCabinet(cab) {
   selectedCabinet = cab;
-  
+
   // Update list selection
   document.querySelectorAll('.cabinet-item').forEach(el => {
     el.classList.remove('bg-emerald-500/20', 'border-emerald-500/50');
@@ -435,25 +555,37 @@ function selectCabinet(cab) {
     selected.classList.remove('bg-slate-700/30', 'border-transparent');
     selected.classList.add('bg-emerald-500/20', 'border-emerald-500/50');
   }
-  
+
   // Update markers
   markers.forEach(m => {
     const c = cabinets.find(x => x.id === m.cabinetId);
     m.setIcon(createMarkerIcon(STATUS_COLORS[c.status].hex, m.cabinetId === cab.id));
   });
-  
-  // Draw street line
+
+  // Clear existing CL lines
   if (currentStreetLine) mainMap.removeLayer(currentStreetLine);
-  currentStreetLine = L.polyline(cab.street, {
-    color: STATUS_COLORS[cab.status].hex,
-    weight: 8,
-    opacity: 0.9,
-    lineCap: 'round'
-  }).addTo(mainMap);
-  
+  currentCLLines.forEach(line => mainMap.removeLayer(line));
+  currentCLLines = [];
+
+  // Draw CL street lines with state-based colors
+  if (cab.clRanges && cab.clRanges.length > 0) {
+    cab.clRanges.forEach(cl => {
+      if (cl.coords && cl.coords.length > 1) {
+        const line = L.polyline(cl.coords, {
+          color: CL_STATE_COLORS[cl.state]?.hex || STATUS_COLORS[cab.status].hex,
+          weight: 8,
+          opacity: 0.9,
+          lineCap: 'round'
+        }).addTo(mainMap);
+        line.bindTooltip(`${cl.street} (№${cl.from}-${cl.to}) - ${CL_STATE_COLORS[cl.state]?.label || 'UNKNOWN'}`, { permanent: false, sticky: true });
+        currentCLLines.push(line);
+      }
+    });
+  }
+
   // Fly to location
   mainMap.flyTo(cab.coords, 16, { duration: 0.5 });
-  
+
   // Show detail panel
   showDetailPanel(cab);
 }
@@ -509,6 +641,8 @@ function showDetailPanel(cab) {
 function closeDetailPanel() {
   document.getElementById('detailPanel').classList.add('hidden');
   if (currentStreetLine) mainMap.removeLayer(currentStreetLine);
+  currentCLLines.forEach(line => mainMap.removeLayer(line));
+  currentCLLines = [];
   markers.forEach(m => {
     const c = cabinets.find(x => x.id === m.cabinetId);
     m.setIcon(createMarkerIcon(STATUS_COLORS[c.status].hex, false));
@@ -619,6 +753,323 @@ document.getElementById('searchCabinet')?.addEventListener('input', (e) => {
     el.style.display = (cab.name.toLowerCase().includes(q) || cab.id.toLowerCase().includes(q)) ? '' : 'none';
   });
 });
+
+// ============ ELECTRICAL PANELS (EP) MANAGEMENT ============
+let epPreviewMap = null;
+let epPreviewLines = [];
+let selectedEP = null;
+let clRangeCount = 0;
+
+function renderEPList() {
+  const list = document.getElementById('epList');
+  if (!list) return;
+  list.innerHTML = cabinets.map(ep => `
+    <button onclick="selectEP('${ep.id}')" class="ep-item w-full p-3 rounded-lg text-left transition-all bg-slate-700/30 hover:bg-slate-700/50 border border-transparent" data-id="${ep.id}">
+      <div class="flex items-start justify-between mb-1">
+        <span class="text-white font-medium text-sm">${ep.name}</span>
+        <span class="w-2.5 h-2.5 rounded-full ${STATUS_COLORS[ep.status].bg}"></span>
+      </div>
+      <div class="text-xs text-slate-400">${ep.id}</div>
+      <div class="text-xs text-slate-500 mt-1">${ep.address || 'No address'}</div>
+      <div class="flex items-center justify-between mt-2 text-xs">
+        <span class="text-slate-500">${ep.clRanges?.length || 0} street(s)</span>
+        <span class="text-emerald-400 font-mono">${ep.power} kW</span>
+      </div>
+    </button>
+  `).join('');
+}
+
+function selectEP(id) {
+  const ep = cabinets.find(c => c.id === id);
+  if (!ep) return;
+  selectedEP = ep;
+
+  // Update list selection
+  document.querySelectorAll('.ep-item').forEach(el => {
+    el.classList.remove('bg-emerald-500/20', 'border-emerald-500/50');
+    el.classList.add('bg-slate-700/30', 'border-transparent');
+  });
+  const selected = document.querySelector(`.ep-item[data-id="${id}"]`);
+  if (selected) {
+    selected.classList.remove('bg-slate-700/30', 'border-transparent');
+    selected.classList.add('bg-emerald-500/20', 'border-emerald-500/50');
+  }
+
+  // Show detail
+  showEPDetail(ep);
+
+  // Update preview map
+  updateEPPreviewMap(ep);
+}
+
+function showEPDetail(ep) {
+  const content = document.getElementById('epDetailContent');
+  content.innerHTML = `
+    <div class="flex items-start justify-between mb-4">
+      <div>
+        <h3 class="text-xl font-semibold">${ep.name}</h3>
+        <p class="text-slate-400 text-sm">${ep.id}</p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="openEPModal('${ep.id}')" class="px-3 py-1.5 bg-slate-600 hover:bg-slate-500 text-white text-sm rounded-lg">Edit</button>
+        <button onclick="confirmDeleteEP('${ep.id}')" class="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm rounded-lg">Delete</button>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 mb-4">
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm ${STATUS_COLORS[ep.status].bg} bg-opacity-20 ${STATUS_COLORS[ep.status].text} border border-current">
+        <span class="w-2 h-2 rounded-full ${STATUS_COLORS[ep.status].bg}"></span>
+        ${ep.status.toUpperCase()}
+      </span>
+      <span class="text-slate-500 text-sm">${ep.lastSeen}</span>
+    </div>
+    <div class="grid grid-cols-2 gap-4 mb-4">
+      <div class="bg-slate-900/50 rounded-lg p-3">
+        <div class="text-slate-500 text-xs mb-1">Panel Address</div>
+        <div class="text-sm">${ep.address || 'Not set'}</div>
+      </div>
+      <div class="bg-slate-900/50 rounded-lg p-3">
+        <div class="text-slate-500 text-xs mb-1">Coordinates</div>
+        <div class="text-sm font-mono">${ep.coords[0].toFixed(4)}, ${ep.coords[1].toFixed(4)}</div>
+      </div>
+    </div>
+    <div class="mb-4">
+      <h4 class="text-sm font-medium text-slate-300 mb-3">City Lights (CL) Coverage</h4>
+      <div class="space-y-2">
+        ${(ep.clRanges || []).map((cl, i) => `
+          <div class="flex items-center justify-between p-3 bg-slate-900/30 rounded-lg">
+            <div class="flex items-center gap-3">
+              <span class="w-3 h-3 rounded-full" style="background: ${CL_STATE_COLORS[cl.state]?.hex || '#64748b'}"></span>
+              <div>
+                <div class="text-sm">${cl.street}</div>
+                <div class="text-xs text-slate-500">№${cl.from} → №${cl.to}</div>
+              </div>
+            </div>
+            <span class="text-xs px-2 py-0.5 rounded ${cl.state === 'ok' ? 'bg-emerald-500/20 text-emerald-400' : cl.state === 'warning' ? 'bg-amber-500/20 text-amber-400' : cl.state === 'critical' ? 'bg-red-500/20 text-red-400' : 'bg-slate-600 text-slate-400'}">${CL_STATE_COLORS[cl.state]?.label || 'UNKNOWN'}</span>
+          </div>
+        `).join('') || '<div class="text-slate-500 text-sm">No street ranges defined</div>'}
+      </div>
+    </div>
+  `;
+}
+
+function initEPPreviewMap() {
+  if (epPreviewMap) return;
+  const container = document.getElementById('epPreviewMap');
+  if (!container) return;
+
+  epPreviewMap = L.map('epPreviewMap', { zoomControl: true, attributionControl: false }).setView(MAP_CENTER, 12);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(epPreviewMap);
+
+  // Add all EP markers
+  cabinets.forEach(ep => {
+    L.marker(ep.coords, { icon: createMarkerIcon(STATUS_COLORS[ep.status].hex) })
+      .addTo(epPreviewMap)
+      .on('click', () => selectEP(ep.id));
+  });
+}
+
+function updateEPPreviewMap(ep) {
+  if (!epPreviewMap) initEPPreviewMap();
+  if (!epPreviewMap) return;
+
+  // Clear existing lines
+  epPreviewLines.forEach(line => epPreviewMap.removeLayer(line));
+  epPreviewLines = [];
+
+  // Draw CL street lines
+  if (ep.clRanges) {
+    ep.clRanges.forEach(cl => {
+      if (cl.coords && cl.coords.length > 1) {
+        const line = L.polyline(cl.coords, {
+          color: CL_STATE_COLORS[cl.state]?.hex || '#64748b',
+          weight: 6,
+          opacity: 0.9,
+          lineCap: 'round'
+        }).addTo(epPreviewMap);
+        line.bindTooltip(`${cl.street} (№${cl.from}-${cl.to}) - ${CL_STATE_COLORS[cl.state]?.label || 'UNKNOWN'}`, { permanent: false });
+        epPreviewLines.push(line);
+      }
+    });
+  }
+
+  // Fly to EP location
+  epPreviewMap.flyTo(ep.coords, 15, { duration: 0.5 });
+}
+
+// EP Modal functions
+function openEPModal(editId = null) {
+  const modal = document.getElementById('epModal');
+  const title = document.getElementById('epModalTitle');
+  const form = document.getElementById('epForm');
+
+  form.reset();
+  document.getElementById('epEditId').value = '';
+  document.getElementById('clRangesContainer').innerHTML = '';
+  clRangeCount = 0;
+
+  if (editId) {
+    const ep = cabinets.find(c => c.id === editId);
+    if (ep) {
+      title.textContent = 'Edit Electrical Panel';
+      document.getElementById('epEditId').value = ep.id;
+      document.getElementById('epName').value = ep.name;
+      document.getElementById('epAddress').value = ep.address || '';
+      document.getElementById('epLat').value = ep.coords[0];
+      document.getElementById('epLng').value = ep.coords[1];
+      document.getElementById('epStatus').value = ep.status;
+
+      // Load CL ranges
+      if (ep.clRanges) {
+        ep.clRanges.forEach(cl => addCLRange(cl));
+      }
+    }
+  } else {
+    title.textContent = 'Add Electrical Panel';
+    addCLRange(); // Add one empty range by default
+  }
+
+  modal.classList.remove('hidden');
+}
+
+function closeEPModal() {
+  document.getElementById('epModal').classList.add('hidden');
+}
+
+function addCLRange(data = null) {
+  const container = document.getElementById('clRangesContainer');
+  const index = clRangeCount++;
+
+  const rangeHtml = `
+    <div class="cl-range bg-slate-900/30 rounded-lg p-3" data-index="${index}">
+      <div class="flex justify-between items-center mb-2">
+        <span class="text-xs text-slate-400">Street Range ${index + 1}</span>
+        <button type="button" onclick="removeCLRange(${index})" class="text-red-400 hover:text-red-300 text-xs">Remove</button>
+      </div>
+      <div class="grid grid-cols-3 gap-2 mb-2">
+        <input type="text" name="clStreet_${index}" class="col-span-3 bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white placeholder-slate-500" placeholder="Street name" value="${data?.street || ''}">
+        <input type="number" name="clFrom_${index}" class="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white placeholder-slate-500" placeholder="From №" value="${data?.from || ''}">
+        <input type="number" name="clTo_${index}" class="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white placeholder-slate-500" placeholder="To №" value="${data?.to || ''}">
+        <select name="clState_${index}" class="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white">
+          <option value="ok" ${data?.state === 'ok' ? 'selected' : ''}>OK</option>
+          <option value="warning" ${data?.state === 'warning' ? 'selected' : ''}>Warning</option>
+          <option value="critical" ${data?.state === 'critical' ? 'selected' : ''}>Critical</option>
+          <option value="offline" ${data?.state === 'offline' ? 'selected' : ''}>Offline</option>
+        </select>
+      </div>
+    </div>
+  `;
+  container.insertAdjacentHTML('beforeend', rangeHtml);
+}
+
+function removeCLRange(index) {
+  const range = document.querySelector(`.cl-range[data-index="${index}"]`);
+  if (range) range.remove();
+}
+
+function confirmDeleteEP(id) {
+  const ep = cabinets.find(c => c.id === id);
+  showModal(
+    'Delete Electrical Panel?',
+    `Are you sure you want to delete "${ep.name}"? This action cannot be undone.`,
+    () => deleteEP(id)
+  );
+}
+
+function deleteEP(id) {
+  const index = cabinets.findIndex(c => c.id === id);
+  if (index > -1) {
+    cabinets.splice(index, 1);
+    renderEPList();
+    document.getElementById('epDetailContent').innerHTML = '<div class="h-64 flex items-center justify-center text-slate-500">Select an Electrical Panel to view details</div>';
+    selectedEP = null;
+  }
+}
+
+// EP Form submit
+document.getElementById('epForm')?.addEventListener('submit', (e) => {
+  e.preventDefault();
+
+  const editId = document.getElementById('epEditId').value;
+  const name = document.getElementById('epName').value;
+  const address = document.getElementById('epAddress').value;
+  const lat = parseFloat(document.getElementById('epLat').value);
+  const lng = parseFloat(document.getElementById('epLng').value);
+  const status = document.getElementById('epStatus').value;
+
+  // Collect CL ranges
+  const clRanges = [];
+  document.querySelectorAll('.cl-range').forEach(rangeEl => {
+    const idx = rangeEl.dataset.index;
+    const street = document.querySelector(`[name="clStreet_${idx}"]`)?.value;
+    const from = parseInt(document.querySelector(`[name="clFrom_${idx}"]`)?.value);
+    const to = parseInt(document.querySelector(`[name="clTo_${idx}"]`)?.value);
+    const state = document.querySelector(`[name="clState_${idx}"]`)?.value;
+
+    if (street && !isNaN(from) && !isNaN(to)) {
+      clRanges.push({ street, from, to, state, coords: [] }); // coords would be set via map interaction
+    }
+  });
+
+  if (editId) {
+    // Update existing
+    const ep = cabinets.find(c => c.id === editId);
+    if (ep) {
+      ep.name = name;
+      ep.address = address;
+      ep.coords = [lat, lng];
+      ep.status = status;
+      // Preserve existing coords in clRanges if street matches
+      clRanges.forEach(newCl => {
+        const existingCl = ep.clRanges?.find(c => c.street === newCl.street);
+        if (existingCl) newCl.coords = existingCl.coords;
+      });
+      ep.clRanges = clRanges;
+    }
+  } else {
+    // Add new
+    const newId = 'CAB-' + String(cabinets.length + 1).padStart(3, '0');
+    cabinets.push({
+      id: newId,
+      name,
+      address,
+      coords: [lat, lng],
+      status,
+      power: 0,
+      lastSeen: 'Just now',
+      area: 'New',
+      circuits: 0,
+      clRanges
+    });
+  }
+
+  closeEPModal();
+  renderEPList();
+  if (editId) selectEP(editId);
+});
+
+// EP Search
+document.getElementById('searchEP')?.addEventListener('input', (e) => {
+  const q = e.target.value.toLowerCase();
+  document.querySelectorAll('.ep-item').forEach(el => {
+    const id = el.dataset.id;
+    const ep = cabinets.find(c => c.id === id);
+    const match = ep.name.toLowerCase().includes(q) || ep.id.toLowerCase().includes(q) || (ep.address || '').toLowerCase().includes(q);
+    el.style.display = match ? '' : 'none';
+  });
+});
+
+// Update showScreen to handle electrical-panels
+const originalShowScreen = showScreen;
+showScreen = function(screen) {
+  originalShowScreen(screen);
+  if (screen === 'electrical-panels') {
+    renderEPList();
+    setTimeout(() => {
+      initEPPreviewMap();
+      if (epPreviewMap) epPreviewMap.invalidateSize();
+    }, 100);
+  }
+};
 </script>
 </body>
 </html>
