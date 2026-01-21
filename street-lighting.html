@@ -304,15 +304,23 @@
           <input type="text" id="epName" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="e.g., Vitosha Blvd Hub" required>
         </div>
         <div>
+          <label class="block text-sm font-medium text-slate-300 mb-2">City</label>
+          <div class="relative">
+            <input type="text" id="epCity" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="e.g., Sofia, Bulgaria" value="Sofia, Bulgaria" autocomplete="off">
+            <div id="citySuggestions" class="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto hidden"></div>
+          </div>
+          <p class="text-xs text-slate-500 mt-1">Select city first to filter street suggestions</p>
+        </div>
+        <div>
           <label class="block text-sm font-medium text-slate-300 mb-2">Panel Address</label>
           <div class="relative">
-            <input type="text" id="epAddress" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="Start typing address..." autocomplete="off" required>
+            <input type="text" id="epAddress" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="Start typing street address..." autocomplete="off" required>
             <div id="addressSuggestions" class="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto hidden"></div>
             <div id="addressLoading" class="absolute right-3 top-3 hidden">
               <svg class="w-5 h-5 text-emerald-400 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
             </div>
           </div>
-          <p class="text-xs text-slate-500 mt-1">Type to search or manually enter coordinates below</p>
+          <p class="text-xs text-slate-500 mt-1">Streets within selected city will appear first</p>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -389,28 +397,32 @@ const MAP_CENTER = [42.6977, 23.3219];
 const cabinets = [
   { id: 'CAB-001', name: 'Vitosha Blvd Hub', status: 'ok', power: 12.4, lastSeen: '2 min ago', area: 'Downtown', circuits: 24,
     coords: [42.6936, 23.3203],
-    address: 'Vitosha Blvd 1, Sofia',
+    city: 'Sofia, Bulgaria',
+    address: 'Vitosha Blvd 1',
     clRanges: [
       { street: 'Vitosha Blvd', from: 1, to: 33, state: 'ok', coords: [[42.6966, 23.3199], [42.6956, 23.3200], [42.6946, 23.3201], [42.6936, 23.3203], [42.6926, 23.3204], [42.6916, 23.3206], [42.6906, 23.3207]] }
     ]
   },
   { id: 'CAB-002', name: 'NDK Park Node', status: 'warning', power: 8.7, lastSeen: '5 min ago', area: 'Central Park', circuits: 18,
     coords: [42.6863, 23.3186],
-    address: 'NDK Square 2, Sofia',
+    city: 'Sofia, Bulgaria',
+    address: 'NDK Square 2',
     clRanges: [
       { street: 'Bulgaria Blvd', from: 1, to: 25, state: 'warning', coords: [[42.6883, 23.3156], [42.6873, 23.3171], [42.6863, 23.3186], [42.6853, 23.3201], [42.6843, 23.3216]] }
     ]
   },
   { id: 'CAB-003', name: 'Industrial Zone Alpha', status: 'critical', power: 0, lastSeen: '45 min ago', area: 'Industrial', circuits: 32,
     coords: [42.7150, 23.2850],
-    address: 'Industrial Blvd 45, Sofia',
+    city: 'Sofia, Bulgaria',
+    address: 'Industrial Blvd 45',
     clRanges: [
       { street: 'Industrial Blvd', from: 20, to: 60, state: 'critical', coords: [[42.7180, 23.2820], [42.7165, 23.2835], [42.7150, 23.2850], [42.7135, 23.2865], [42.7120, 23.2880]] }
     ]
   },
   { id: 'CAB-004', name: 'Tsarigradsko Junction', status: 'ok', power: 15.2, lastSeen: '1 min ago', area: 'East Side', circuits: 28,
     coords: [42.6725, 23.3550],
-    address: 'Tsarigradsko Shose 100, Sofia',
+    city: 'Sofia, Bulgaria',
+    address: 'Tsarigradsko Shose 100',
     clRanges: [
       { street: 'Tsarigradsko Shose', from: 80, to: 120, state: 'ok', coords: [[42.6745, 23.3480], [42.6735, 23.3515], [42.6725, 23.3550]] },
       { street: 'Samokov Road', from: 1, to: 15, state: 'ok', coords: [[42.6725, 23.3550], [42.6715, 23.3585], [42.6705, 23.3620]] }
@@ -418,14 +430,16 @@ const cabinets = [
   },
   { id: 'CAB-005', name: 'Serdika Terminal', status: 'offline', power: 0, lastSeen: '2 hours ago', area: 'Center', circuits: 20,
     coords: [42.6975, 23.3225],
-    address: 'Maria Louisa Blvd 18, Sofia',
+    city: 'Sofia, Bulgaria',
+    address: 'Maria Louisa Blvd 18',
     clRanges: [
       { street: 'Maria Louisa Blvd', from: 1, to: 30, state: 'offline', coords: [[42.7005, 23.3210], [42.6990, 23.3218], [42.6975, 23.3225], [42.6960, 23.3233], [42.6945, 23.3240]] }
     ]
   },
   { id: 'CAB-006', name: 'Sofia University', status: 'ok', power: 9.8, lastSeen: '30 sec ago', area: 'Campus', circuits: 16,
     coords: [42.6932, 23.3345],
-    address: 'Tsar Osvoboditel Blvd 15, Sofia',
+    city: 'Sofia, Bulgaria',
+    address: 'Tsar Osvoboditel Blvd 15',
     clRanges: [
       { street: 'Tsar Osvoboditel Blvd', from: 1, to: 20, state: 'ok', coords: [[42.6962, 23.3330], [42.6947, 23.3338], [42.6932, 23.3345]] },
       { street: 'Vasil Levski Blvd', from: 1, to: 10, state: 'warning', coords: [[42.6932, 23.3345], [42.6917, 23.3353], [42.6902, 23.3360]] }
@@ -769,26 +783,37 @@ let clRangeCount = 0;
 let addressSearchTimeout = null;
 
 // Address Autocomplete using OpenStreetMap Nominatim
+let citySearchTimeout = null;
+let selectedCityBounds = null; // Store city bounding box for filtering
+
 function initAddressAutocomplete() {
+  const cityInput = document.getElementById('epCity');
+  const citySuggestionsDiv = document.getElementById('citySuggestions');
   const addressInput = document.getElementById('epAddress');
   const suggestionsDiv = document.getElementById('addressSuggestions');
   const loadingDiv = document.getElementById('addressLoading');
 
-  if (!addressInput) return;
+  if (!addressInput || !cityInput) return;
 
+  // City autocomplete
+  cityInput.addEventListener('input', (e) => {
+    const query = e.target.value.trim();
+    if (citySearchTimeout) clearTimeout(citySearchTimeout);
+    if (query.length < 2) {
+      citySuggestionsDiv.classList.add('hidden');
+      return;
+    }
+    citySearchTimeout = setTimeout(() => searchCity(query), 400);
+  });
+
+  // Address autocomplete
   addressInput.addEventListener('input', (e) => {
     const query = e.target.value.trim();
-
-    // Clear previous timeout
     if (addressSearchTimeout) clearTimeout(addressSearchTimeout);
-
-    // Hide suggestions if query is too short
     if (query.length < 3) {
       suggestionsDiv.classList.add('hidden');
       return;
     }
-
-    // Debounce: wait 400ms before searching
     addressSearchTimeout = setTimeout(() => searchAddress(query), 400);
   });
 
@@ -797,28 +822,83 @@ function initAddressAutocomplete() {
     if (!e.target.closest('#epAddress') && !e.target.closest('#addressSuggestions')) {
       suggestionsDiv.classList.add('hidden');
     }
+    if (!e.target.closest('#epCity') && !e.target.closest('#citySuggestions')) {
+      citySuggestionsDiv.classList.add('hidden');
+    }
   });
+
+  // Set default city bounds for Sofia
+  selectedCityBounds = { viewbox: '23.2,42.6,23.5,42.8' };
+}
+
+async function searchCity(query) {
+  const citySuggestionsDiv = document.getElementById('citySuggestions');
+
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&type=city&limit=5&addressdetails=1`,
+      { headers: { 'Accept-Language': 'en' } }
+    );
+    const results = await response.json();
+
+    if (results.length === 0) {
+      citySuggestionsDiv.innerHTML = '<div class="p-3 text-slate-500 text-sm">No cities found</div>';
+      citySuggestionsDiv.classList.remove('hidden');
+      return;
+    }
+
+    citySuggestionsDiv.innerHTML = results.map(place => `
+      <button type="button" class="w-full text-left p-3 hover:bg-slate-700 border-b border-slate-700/50 last:border-0" onclick="selectCity('${place.display_name.replace(/'/g, "\\'")}', '${place.boundingbox.join(',')}')">
+        <div class="text-white text-sm">${place.display_name.split(',').slice(0, 2).join(',')}</div>
+        <div class="text-slate-500 text-xs mt-1">${place.display_name.split(',').slice(2, 4).join(',') || place.type}</div>
+      </button>
+    `).join('');
+
+    citySuggestionsDiv.classList.remove('hidden');
+  } catch (error) {
+    citySuggestionsDiv.innerHTML = '<div class="p-3 text-red-400 text-sm">Error searching cities</div>';
+    citySuggestionsDiv.classList.remove('hidden');
+  }
+}
+
+function selectCity(displayName, boundingBox) {
+  document.getElementById('epCity').value = displayName;
+  document.getElementById('citySuggestions').classList.add('hidden');
+
+  // Parse bounding box: [south, north, west, east] -> viewbox: west,south,east,north
+  const bounds = boundingBox.split(',');
+  selectedCityBounds = {
+    viewbox: `${bounds[2]},${bounds[0]},${bounds[3]},${bounds[1]}`,
+    bounded: 1
+  };
 }
 
 async function searchAddress(query) {
   const suggestionsDiv = document.getElementById('addressSuggestions');
   const loadingDiv = document.getElementById('addressLoading');
+  const city = document.getElementById('epCity').value.trim();
 
   loadingDiv.classList.remove('hidden');
 
   try {
-    // Use Nominatim API (OpenStreetMap) - free, no API key needed
-    // Bias results towards Sofia, Bulgaria area
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&viewbox=23.0,42.5,23.6,42.9&bounded=0`,
-      { headers: { 'Accept-Language': 'en' } }
-    );
+    // Build search query with city filter
+    let searchQuery = query;
+    if (city && !query.toLowerCase().includes(city.toLowerCase().split(',')[0])) {
+      searchQuery = `${query}, ${city.split(',')[0]}`;
+    }
 
+    // Use city bounding box if available
+    let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=6&addressdetails=1`;
+    if (selectedCityBounds) {
+      url += `&viewbox=${selectedCityBounds.viewbox}&bounded=${selectedCityBounds.bounded || 0}`;
+    }
+
+    const response = await fetch(url, { headers: { 'Accept-Language': 'en' } });
     const results = await response.json();
     loadingDiv.classList.add('hidden');
 
     if (results.length === 0) {
-      suggestionsDiv.innerHTML = '<div class="p-3 text-slate-500 text-sm">No results found</div>';
+      suggestionsDiv.innerHTML = '<div class="p-3 text-slate-500 text-sm">No results found in selected city</div>';
       suggestionsDiv.classList.remove('hidden');
       return;
     }
@@ -826,7 +906,7 @@ async function searchAddress(query) {
     suggestionsDiv.innerHTML = results.map((place, i) => `
       <button type="button" class="w-full text-left p-3 hover:bg-slate-700 border-b border-slate-700/50 last:border-0" onclick="selectAddress(${place.lat}, ${place.lon}, '${place.display_name.replace(/'/g, "\\'")}')">
         <div class="text-white text-sm">${place.display_name.split(',').slice(0, 3).join(',')}</div>
-        <div class="text-slate-500 text-xs mt-1">${place.display_name.split(',').slice(3).join(',') || place.type}</div>
+        <div class="text-slate-500 text-xs mt-1">${place.type} • ${place.display_name.split(',').slice(3, 5).join(',')}</div>
       </button>
     `).join('');
 
@@ -857,7 +937,7 @@ function renderEPList() {
         <span class="text-white font-medium text-sm">${ep.name}</span>
         <span class="w-2.5 h-2.5 rounded-full ${STATUS_COLORS[ep.status].bg}"></span>
       </div>
-      <div class="text-xs text-slate-400">${ep.id}</div>
+      <div class="text-xs text-slate-400">${ep.id} • ${ep.city || 'No city'}</div>
       <div class="text-xs text-slate-500 mt-1">${ep.address || 'No address'}</div>
       <div class="flex items-center justify-between mt-2 text-xs">
         <span class="text-slate-500">${ep.clRanges?.length || 0} street(s)</span>
@@ -912,13 +992,17 @@ function showEPDetail(ep) {
     </div>
     <div class="grid grid-cols-2 gap-4 mb-4">
       <div class="bg-slate-900/50 rounded-lg p-3">
+        <div class="text-slate-500 text-xs mb-1">City</div>
+        <div class="text-sm">${ep.city || 'Not set'}</div>
+      </div>
+      <div class="bg-slate-900/50 rounded-lg p-3">
         <div class="text-slate-500 text-xs mb-1">Panel Address</div>
         <div class="text-sm">${ep.address || 'Not set'}</div>
       </div>
-      <div class="bg-slate-900/50 rounded-lg p-3">
-        <div class="text-slate-500 text-xs mb-1">Coordinates</div>
-        <div class="text-sm font-mono">${ep.coords[0].toFixed(4)}, ${ep.coords[1].toFixed(4)}</div>
-      </div>
+    </div>
+    <div class="bg-slate-900/50 rounded-lg p-3 mb-4">
+      <div class="text-slate-500 text-xs mb-1">Coordinates</div>
+      <div class="text-sm font-mono">${ep.coords[0].toFixed(4)}, ${ep.coords[1].toFixed(4)}</div>
     </div>
     <div class="mb-4">
       <h4 class="text-sm font-medium text-slate-300 mb-3">City Lights (CL) Coverage</h4>
@@ -1002,6 +1086,7 @@ function openEPModal(editId = null) {
       title.textContent = 'Edit Electrical Panel';
       document.getElementById('epEditId').value = ep.id;
       document.getElementById('epName').value = ep.name;
+      document.getElementById('epCity').value = ep.city || 'Sofia, Bulgaria';
       document.getElementById('epAddress').value = ep.address || '';
       document.getElementById('epLat').value = ep.coords[0];
       document.getElementById('epLng').value = ep.coords[1];
@@ -1081,6 +1166,7 @@ document.getElementById('epForm')?.addEventListener('submit', (e) => {
 
   const editId = document.getElementById('epEditId').value;
   const name = document.getElementById('epName').value;
+  const city = document.getElementById('epCity').value;
   const address = document.getElementById('epAddress').value;
   const lat = parseFloat(document.getElementById('epLat').value);
   const lng = parseFloat(document.getElementById('epLng').value);
@@ -1105,6 +1191,7 @@ document.getElementById('epForm')?.addEventListener('submit', (e) => {
     const ep = cabinets.find(c => c.id === editId);
     if (ep) {
       ep.name = name;
+      ep.city = city;
       ep.address = address;
       ep.coords = [lat, lng];
       ep.status = status;
@@ -1121,12 +1208,13 @@ document.getElementById('epForm')?.addEventListener('submit', (e) => {
     cabinets.push({
       id: newId,
       name,
+      city,
       address,
       coords: [lat, lng],
       status,
       power: 0,
       lastSeen: 'Just now',
-      area: 'New',
+      area: city.split(',')[0] || 'New',
       circuits: 0,
       clRanges
     });
