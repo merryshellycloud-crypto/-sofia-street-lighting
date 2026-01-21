@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Street Lighting Control Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            slate: { 950: '#020617', 900: '#0f172a', 800: '#1e293b', 700: '#334155', 600: '#475569', 500: '#64748b', 400: '#94a3b8' },
+            emerald: { 500: '#10b981', 400: '#34d399', 600: '#059669' },
+            amber: { 500: '#f59e0b', 400: '#fbbf24' },
+            red: { 500: '#ef4444', 400: '#f87171' },
+            teal: { 500: '#14b8a6', 600: '#0d9488' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; }
+    .leaflet-container { background: #0f172a; }
+    .custom-popup .leaflet-popup-content-wrapper { background: #1e293b; color: white; border-radius: 8px; }
+    .custom-popup .leaflet-popup-tip { background: #1e293b; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #1e293b; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-white min-h-screen">
+  <!-- Login Screen -->
+  <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+      <div class="bg-slate-900/80 backdrop-blur border border-slate-800 rounded-2xl p-8 shadow-2xl">
+        <div class="text-center mb-8">
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 mb-4">
+            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+          <h1 class="text-2xl font-bold">Street Lighting</h1>
+          <p class="text-slate-400 text-sm mt-1">Control Platform</p>
+        </div>
+        <form id="loginForm" class="space-y-5">
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-2">Username</label>
+            <input type="text" id="username" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="Enter username" required>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-2">Password</label>
+            <input type="password" id="password" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="Enter password" required>
+          </div>
+          <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold py-3 rounded-lg hover:from-emerald-600 hover:to-teal-700">Sign In</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="mainApp" class="hidden">
+    <!-- Top Bar -->
+    <header class="fixed top-0 left-0 right-0 h-14 bg-slate-900/95 backdrop-blur border-b border-slate-800 z-50 flex items-center justify-between px-4">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </div>
+        <span class="font-bold text-lg hidden sm:block">Street Lighting</span>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/30 rounded-lg">
+        <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+        <span class="text-emerald-400 text-sm font-medium">Online</span>
+      </div>
+      <button onclick="logout()" class="flex items-center gap-2 px-3 py-2 hover:bg-slate-800 rounded-lg text-red-400">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        <span class="hidden sm:block">Sign Out</span>
+      </button>
+    </header>
+
+    <!-- Navigation -->
+    <nav id="nav" class="fixed left-0 top-14 bottom-0 w-56 bg-slate-900/95 backdrop-blur border-r border-slate-800 z-40 transition-all">
+      <div class="p-2 space-y-1">
+        <button onclick="showScreen('dashboard')" data-screen="dashboard" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+          <span>Dashboard</span>
+        </button>
+        <button onclick="showScreen('map')" data-screen="map" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+          <span>Map</span>
+        </button>
+        <button onclick="showScreen('alarms')" data-screen="alarms" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+          <span>Alarms</span>
+          <span class="ml-auto bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">3</span>
+        </button>
+        <button onclick="showScreen('groups')" data-screen="groups" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span>Groups</span>
+        </button>
+        <button onclick="showScreen('reports')" data-screen="reports" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>Reports</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="pt-14 pl-56 min-h-screen">
+      <!-- Dashboard Screen -->
+      <div id="screen-dashboard" class="screen p-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div class="bg-slate-800/50 border border-slate-700/50 rounded-lg p-5">
+            <div class="flex justify-between mb-3">
+              <span class="text-slate-400 text-sm uppercase tracking-wider">Active Cabinets</span>
+              <div class="p-2 rounded-lg bg-emerald-500/20"><svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+            </div>
+            <div class="text-3xl font-mono font-bold">5/6</div>
+          </div>
+          <div class="bg-slate-800/50 border border-slate-700/50 rounded-lg p-5">
+            <div class="flex justify-between mb-3">
+              <span class="text-slate-400 text-sm uppercase tracking-wider">Lights ON</span>
+              <div class="p-2 rounded-lg bg-emerald-500/20"><svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
+            </div>
+            <div class="text-3xl font-mono font-bold">78%</div>
+          </div>
+          <div class="bg-slate-800/50 border border-slate-700/50 rounded-lg p-5">
+            <div class="flex justify-between mb-3">
+              <span class="text-slate-400 text-sm uppercase tracking-wider">Power</span>
+              <div class="p-2 rounded-lg bg-emerald-500/20"><svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
+            </div>
+            <div class="text-3xl font-mono font-bold">46.1 <span class="text-sm text-slate-400">kW</span></div>
+          </div>
+          <div class="bg-slate-800/50 border border-slate-700/50 rounded-lg p-5">
+            <div class="flex justify-between mb-3">
+              <span class="text-slate-400 text-sm uppercase tracking-wider">Alarms</span>
+              <div class="p-2 rounded-lg bg-amber-500/20"><svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></div>
+            </div>
+            <div class="text-3xl font-mono font-bold text-amber-400">3</div>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
+            <div class="flex justify-between mb-4">
+              <h3 class="text-lg font-semibold">City Overview</h3>
+              <button onclick="showScreen('map')" class="text-emerald-400 hover:text-emerald-300 text-sm flex items-center gap-1">Open Map →</button>
+            </div>
+            <div id="dashboardMap" class="h-64 rounded-lg border border-slate-700"></div>
+          </div>
+          <div class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
+            <h3 class="text-lg font-semibold mb-4">Recent Alarms</h3>
+            <div class="space-y-3">
+              <div class="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                <div class="flex items-center gap-2 text-red-400 text-sm font-medium"><span class="w-2 h-2 bg-red-500 rounded-full"></span>CAB-003 - Power failure</div>
+                <div class="text-slate-500 text-xs mt-1">14:32:15</div>
+              </div>
+              <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                <div class="flex items-center gap-2 text-amber-400 text-sm font-medium"><span class="w-2 h-2 bg-amber-500 rounded-full"></span>CAB-002 - Voltage fluctuation</div>
+                <div class="text-slate-500 text-xs mt-1">14:28:00</div>
+              </div>
+              <div class="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                <div class="flex items-center gap-2 text-red-400 text-sm font-medium"><span class="w-2 h-2 bg-red-500 rounded-full"></span>CAB-005 - Communication lost</div>
+                <div class="text-slate-500 text-xs mt-1">12:45:30</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Map Screen -->
+      <div id="screen-map" class="screen hidden" style="height: calc(100vh - 3.5rem);">
+        <div class="flex h-full">
+          <!-- Cabinet List -->
+          <div class="w-72 bg-slate-800/50 border-r border-slate-700/50 p-4 flex flex-col">
+            <input type="text" id="searchCabinet" placeholder="Search cabinet..." class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 mb-4">
+            <div id="cabinetList" class="flex-1 overflow-y-auto space-y-2"></div>
+          </div>
+          <!-- Map -->
+          <div class="flex-1 relative">
+            <div id="mainMap" class="h-full w-full"></div>
+            <div class="absolute bottom-4 left-4 flex items-center gap-4 bg-slate-800/90 backdrop-blur px-4 py-3 rounded-lg z-[1000]">
+              <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-emerald-500"></span><span class="text-slate-300 text-sm">OK</span></div>
+              <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-amber-500"></span><span class="text-slate-300 text-sm">Warning</span></div>
+              <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-red-500"></span><span class="text-slate-300 text-sm">Critical</span></div>
+              <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-slate-500"></span><span class="text-slate-300 text-sm">Offline</span></div>
+            </div>
+          </div>
+          <!-- Detail Panel -->
+          <div id="detailPanel" class="w-96 bg-slate-800/80 border-l border-slate-700/50 overflow-y-auto hidden">
+            <div id="detailContent"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alarms Screen -->
+      <div id="screen-alarms" class="screen hidden p-6">
+        <div class="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
+          <div class="p-5 border-b border-slate-700/50 flex justify-between items-center">
+            <h3 class="text-lg font-semibold">Active Alarms</h3>
+            <div class="flex gap-2">
+              <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/30"><svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"/></svg><span class="font-mono font-bold text-red-400">2</span></span>
+              <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/30"><svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"/></svg><span class="font-mono font-bold text-amber-400">1</span></span>
+            </div>
+          </div>
+          <table class="w-full">
+            <thead><tr class="text-left text-sm text-slate-400 border-b border-slate-700/50 bg-slate-800/50"><th class="p-4">Severity</th><th class="p-4">Time</th><th class="p-4">Asset</th><th class="p-4">Description</th><th class="p-4">Status</th></tr></thead>
+            <tbody id="alarmsTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Groups Screen -->
+      <div id="screen-groups" class="screen hidden p-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
+            <div class="flex justify-between mb-4">
+              <h3 class="text-lg font-semibold">Lighting Groups</h3>
+              <button class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> New Group</button>
+            </div>
+            <div id="groupsList" class="space-y-3"></div>
+          </div>
+          <div id="groupDetail" class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
+            <div class="h-64 flex items-center justify-center text-slate-500">Select a group</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reports Screen -->
+      <div id="screen-reports" class="screen hidden p-6">
+        <div class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5 mb-6">
+          <div class="flex flex-wrap items-center gap-4">
+            <div>
+              <label class="text-slate-400 text-sm block mb-2">Date Range</label>
+              <select class="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white"><option>Today</option><option>This Week</option><option>This Month</option></select>
+            </div>
+            <div class="ml-auto flex gap-2">
+              <button class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg">CSV</button>
+              <button class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg">PDF</button>
+            </div>
+          </div>
+        </div>
+        <div class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
+          <h3 class="text-lg font-semibold mb-4">Power by Area</h3>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-slate-900/50 rounded-lg p-4 text-center"><div class="text-3xl font-mono">145.2</div><div class="text-slate-400 text-sm">Downtown</div><div class="text-emerald-400 text-xs">kW</div></div>
+            <div class="bg-slate-900/50 rounded-lg p-4 text-center"><div class="text-3xl font-mono">98.5</div><div class="text-slate-400 text-sm">Industrial</div><div class="text-emerald-400 text-xs">kW</div></div>
+            <div class="bg-slate-900/50 rounded-lg p-4 text-center"><div class="text-3xl font-mono">67.3</div><div class="text-slate-400 text-sm">Residential</div><div class="text-emerald-400 text-xs">kW</div></div>
+            <div class="bg-slate-900/50 rounded-lg p-4 text-center"><div class="text-3xl font-mono">54.8</div><div class="text-slate-400 text-sm">East Side</div><div class="text-emerald-400 text-xs">kW</div></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirmModal" class="fixed inset-0 z-[9999] flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/70" onclick="closeModal()"></div>
+    <div class="relative bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-md w-full mx-4">
+      <div class="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center mb-4">
+        <svg class="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      </div>
+      <h3 id="modalTitle" class="text-xl font-semibold mb-2"></h3>
+      <p id="modalMessage" class="text-slate-400 mb-6"></p>
+      <div class="flex gap-3">
+        <button onclick="closeModal()" class="flex-1 px-4 py-2.5 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700">Cancel</button>
+        <button id="modalConfirm" class="flex-1 px-4 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-black font-medium">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ============ DATA ============
+const STATUS_COLORS = {
+  ok: { bg: 'bg-emerald-500', text: 'text-emerald-400', hex: '#10b981' },
+  warning: { bg: 'bg-amber-500', text: 'text-amber-400', hex: '#f59e0b' },
+  critical: { bg: 'bg-red-500', text: 'text-red-400', hex: '#ef4444' },
+  offline: { bg: 'bg-slate-500', text: 'text-slate-400', hex: '#64748b' },
+};
+
+const MAP_CENTER = [42.6977, 23.3219];
+
+const cabinets = [
+  { id: 'CAB-001', name: 'Vitosha Blvd Hub', status: 'ok', power: 12.4, lastSeen: '2 min ago', area: 'Downtown', circuits: 24,
+    coords: [42.6936, 23.3203],
+    street: [[42.6966, 23.3199], [42.6956, 23.3200], [42.6946, 23.3201], [42.6936, 23.3203], [42.6926, 23.3204], [42.6916, 23.3206], [42.6906, 23.3207]]
+  },
+  { id: 'CAB-002', name: 'NDK Park Node', status: 'warning', power: 8.7, lastSeen: '5 min ago', area: 'Central Park', circuits: 18,
+    coords: [42.6863, 23.3186],
+    street: [[42.6883, 23.3156], [42.6873, 23.3171], [42.6863, 23.3186], [42.6853, 23.3201], [42.6843, 23.3216]]
+  },
+  { id: 'CAB-003', name: 'Industrial Zone Alpha', status: 'critical', power: 0, lastSeen: '45 min ago', area: 'Industrial', circuits: 32,
+    coords: [42.7150, 23.2850],
+    street: [[42.7180, 23.2820], [42.7165, 23.2835], [42.7150, 23.2850], [42.7135, 23.2865], [42.7120, 23.2880]]
+  },
+  { id: 'CAB-004', name: 'Tsarigradsko Junction', status: 'ok', power: 15.2, lastSeen: '1 min ago', area: 'East Side', circuits: 28,
+    coords: [42.6725, 23.3550],
+    street: [[42.6745, 23.3480], [42.6735, 23.3515], [42.6725, 23.3550], [42.6715, 23.3585], [42.6705, 23.3620]]
+  },
+  { id: 'CAB-005', name: 'Serdika Terminal', status: 'offline', power: 0, lastSeen: '2 hours ago', area: 'Center', circuits: 20,
+    coords: [42.6975, 23.3225],
+    street: [[42.7005, 23.3210], [42.6990, 23.3218], [42.6975, 23.3225], [42.6960, 23.3233], [42.6945, 23.3240]]
+  },
+  { id: 'CAB-006', name: 'Sofia University', status: 'ok', power: 9.8, lastSeen: '30 sec ago', area: 'Campus', circuits: 16,
+    coords: [42.6932, 23.3345],
+    street: [[42.6962, 23.3330], [42.6947, 23.3338], [42.6932, 23.3345], [42.6917, 23.3353], [42.6902, 23.3360]]
+  },
+];
+
+const alarms = [
+  { id: 1, severity: 'critical', time: '14:32:15', asset: 'CAB-003', description: 'Power failure - no response', status: 'active' },
+  { id: 2, severity: 'warning', time: '14:28:00', asset: 'CAB-002', description: 'Voltage fluctuation detected', status: 'active' },
+  { id: 3, severity: 'critical', time: '12:45:30', asset: 'CAB-005', description: 'Communication lost', status: 'acknowledged' },
+  { id: 4, severity: 'warning', time: '11:20:00', asset: 'CAB-004', description: 'Circuit 12 overcurrent', status: 'resolved' },
+];
+
+const groups = [
+  { id: 1, name: 'Downtown Core', circuits: 86, state: 'on', cabinets: ['CAB-001', 'CAB-002'] },
+  { id: 2, name: 'Park Lighting', circuits: 45, state: 'mixed', cabinets: ['CAB-002', 'CAB-006'] },
+  { id: 3, name: 'Industrial Zone', circuits: 64, state: 'off', cabinets: ['CAB-003'] },
+];
+
+// ============ STATE ============
+let mainMap = null;
+let dashboardMap = null;
+let markers = [];
+let currentStreetLine = null;
+let selectedCabinet = null;
+
+// ============ AUTH ============
+document.getElementById('loginForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
+  showScreen('dashboard');
+});
+
+function logout() {
+  document.getElementById('mainApp').classList.add('hidden');
+  document.getElementById('loginScreen').classList.remove('hidden');
+}
+
+// ============ NAVIGATION ============
+function showScreen(screen) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  document.getElementById('screen-' + screen).classList.remove('hidden');
+  
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.classList.remove('bg-emerald-500/20', 'text-emerald-400', 'border', 'border-emerald-500/30');
+    btn.classList.add('text-slate-400');
+  });
+  const activeBtn = document.querySelector(`[data-screen="${screen}"]`);
+  if (activeBtn) {
+    activeBtn.classList.remove('text-slate-400');
+    activeBtn.classList.add('bg-emerald-500/20', 'text-emerald-400', 'border', 'border-emerald-500/30');
+  }
+  
+  if (screen === 'dashboard') initDashboardMap();
+  if (screen === 'map') initMainMap();
+  if (screen === 'alarms') renderAlarms();
+  if (screen === 'groups') renderGroups();
+}
+
+// ============ MAPS ============
+function createMarkerIcon(color, isSelected = false) {
+  const size = isSelected ? 24 : 16;
+  return L.divIcon({
+    className: 'custom-marker',
+    html: `<div style="width:${size}px;height:${size}px;background:${color};border:${isSelected?4:2}px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.4)${isSelected?',0 0 0 6px '+color+'50':''}"></div>`,
+    iconSize: [size, size],
+    iconAnchor: [size/2, size/2],
+  });
+}
+
+function initDashboardMap() {
+  if (dashboardMap) return;
+  dashboardMap = L.map('dashboardMap', { zoomControl: false, attributionControl: false }).setView(MAP_CENTER, 12);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(dashboardMap);
+  cabinets.forEach(cab => {
+    L.marker(cab.coords, { icon: createMarkerIcon(STATUS_COLORS[cab.status].hex) })
+      .addTo(dashboardMap)
+      .on('click', () => { showScreen('map'); selectCabinet(cab); });
+  });
+}
+
+function initMainMap() {
+  if (mainMap) { mainMap.invalidateSize(); return; }
+  
+  mainMap = L.map('mainMap').setView(MAP_CENTER, 14);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; CARTO'
+  }).addTo(mainMap);
+  
+  cabinets.forEach(cab => {
+    const marker = L.marker(cab.coords, { icon: createMarkerIcon(STATUS_COLORS[cab.status].hex) })
+      .addTo(mainMap)
+      .on('click', () => selectCabinet(cab));
+    marker.cabinetId = cab.id;
+    markers.push(marker);
+  });
+  
+  renderCabinetList();
+}
+
+function renderCabinetList() {
+  const list = document.getElementById('cabinetList');
+  list.innerHTML = cabinets.map(cab => `
+    <button onclick="selectCabinet(cabinets.find(c=>c.id==='${cab.id}'))" 
+      class="cabinet-item w-full p-3 rounded-lg text-left transition-all bg-slate-700/30 hover:bg-slate-700/50 border border-transparent"
+      data-id="${cab.id}">
+      <div class="flex items-start justify-between mb-1">
+        <span class="text-white font-medium text-sm">${cab.name}</span>
+        <span class="w-2.5 h-2.5 rounded-full ${STATUS_COLORS[cab.status].bg}"></span>
+      </div>
+      <div class="text-xs text-slate-400">${cab.id}</div>
+      <div class="flex items-center justify-between mt-2 text-xs">
+        <span class="text-slate-500">${cab.area}</span>
+        <span class="text-emerald-400 font-mono">${cab.power} kW</span>
+      </div>
+    </button>
+  `).join('');
+}
+
+function selectCabinet(cab) {
+  selectedCabinet = cab;
+  
+  // Update list selection
+  document.querySelectorAll('.cabinet-item').forEach(el => {
+    el.classList.remove('bg-emerald-500/20', 'border-emerald-500/50');
+    el.classList.add('bg-slate-700/30', 'border-transparent');
+  });
+  const selected = document.querySelector(`[data-id="${cab.id}"]`);
+  if (selected) {
+    selected.classList.remove('bg-slate-700/30', 'border-transparent');
+    selected.classList.add('bg-emerald-500/20', 'border-emerald-500/50');
+  }
+  
+  // Update markers
+  markers.forEach(m => {
+    const c = cabinets.find(x => x.id === m.cabinetId);
+    m.setIcon(createMarkerIcon(STATUS_COLORS[c.status].hex, m.cabinetId === cab.id));
+  });
+  
+  // Draw street line
+  if (currentStreetLine) mainMap.removeLayer(currentStreetLine);
+  currentStreetLine = L.polyline(cab.street, {
+    color: STATUS_COLORS[cab.status].hex,
+    weight: 8,
+    opacity: 0.9,
+    lineCap: 'round'
+  }).addTo(mainMap);
+  
+  // Fly to location
+  mainMap.flyTo(cab.coords, 16, { duration: 0.5 });
+  
+  // Show detail panel
+  showDetailPanel(cab);
+}
+
+function showDetailPanel(cab) {
+  const panel = document.getElementById('detailPanel');
+  const content = document.getElementById('detailContent');
+  panel.classList.remove('hidden');
+  
+  content.innerHTML = `
+    <div class="sticky top-0 bg-slate-800/95 p-4 border-b border-slate-700/50">
+      <div class="flex items-start justify-between">
+        <div>
+          <h2 class="text-xl font-semibold">${cab.name}</h2>
+          <p class="text-slate-400 text-sm">${cab.id}</p>
+        </div>
+        <button onclick="closeDetailPanel()" class="p-2 hover:bg-slate-700 rounded-lg">
+          <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="flex items-center gap-3 mt-3">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm ${STATUS_COLORS[cab.status].bg} bg-opacity-20 ${STATUS_COLORS[cab.status].text} border border-current">
+          <span class="w-2 h-2 rounded-full ${STATUS_COLORS[cab.status].bg}"></span>
+          ${cab.status.toUpperCase()}
+        </span>
+        <span class="text-slate-500 text-sm">${cab.lastSeen}</span>
+      </div>
+    </div>
+    <div class="p-4 border-b border-slate-700/50">
+      <h3 class="text-sm font-medium text-slate-400 uppercase tracking-wider mb-3">Live Metrics</h3>
+      <div class="grid grid-cols-3 gap-3">
+        <div class="bg-slate-900/50 rounded-lg p-3"><div class="text-slate-500 text-xs mb-1">Power</div><div class="text-xl font-mono">${cab.power}</div><div class="text-slate-500 text-xs">kW</div></div>
+        <div class="bg-slate-900/50 rounded-lg p-3"><div class="text-slate-500 text-xs mb-1">Voltage</div><div class="text-xl font-mono">231</div><div class="text-slate-500 text-xs">V</div></div>
+        <div class="bg-slate-900/50 rounded-lg p-3"><div class="text-slate-500 text-xs mb-1">Current</div><div class="text-xl font-mono">54</div><div class="text-slate-500 text-xs">A</div></div>
+      </div>
+    </div>
+    <div class="p-4">
+      <h3 class="text-sm font-medium text-slate-400 uppercase tracking-wider mb-3">Circuits</h3>
+      <div class="space-y-2">
+        ${['Segment A', 'Segment B', 'Cross St 1', 'Cross St 2'].map((name, i) => `
+          <div class="flex items-center justify-between p-3 bg-slate-900/30 rounded-lg">
+            <div><div class="text-sm">${name}</div><div class="text-slate-500 text-xs font-mono">${(Math.random()*2).toFixed(1)} kW</div></div>
+            <button onclick="toggleCircuit('${cab.id}', ${i}, this)" class="relative w-14 h-7 rounded-full ${i===3?'bg-slate-600':'bg-emerald-500'} ${cab.status==='offline'?'opacity-50 cursor-not-allowed':'cursor-pointer'}">
+              <span class="absolute top-1 w-5 h-5 rounded-full bg-white shadow-lg transition-all ${i===3?'left-1':'left-8'}"></span>
+            </button>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function closeDetailPanel() {
+  document.getElementById('detailPanel').classList.add('hidden');
+  if (currentStreetLine) mainMap.removeLayer(currentStreetLine);
+  markers.forEach(m => {
+    const c = cabinets.find(x => x.id === m.cabinetId);
+    m.setIcon(createMarkerIcon(STATUS_COLORS[c.status].hex, false));
+  });
+}
+
+function toggleCircuit(cabId, circuitIndex, btn) {
+  const cab = cabinets.find(c => c.id === cabId);
+  if (cab.status === 'offline') return;
+  
+  showModal(
+    'Toggle Circuit?',
+    'This will change the circuit state. Confirm to proceed.',
+    () => {
+      btn.classList.toggle('bg-emerald-500');
+      btn.classList.toggle('bg-slate-600');
+      const span = btn.querySelector('span');
+      span.classList.toggle('left-1');
+      span.classList.toggle('left-8');
+    }
+  );
+}
+
+// ============ ALARMS ============
+function renderAlarms() {
+  const table = document.getElementById('alarmsTable');
+  table.innerHTML = alarms.map(a => `
+    <tr class="border-b border-slate-700/30 hover:bg-slate-700/30">
+      <td class="p-4"><span class="w-3 h-3 rounded-full inline-block ${STATUS_COLORS[a.severity].bg}"></span></td>
+      <td class="p-4 font-mono text-slate-300">${a.time}</td>
+      <td class="p-4 font-medium">${a.asset}</td>
+      <td class="p-4 text-slate-400">${a.description}</td>
+      <td class="p-4">
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs ${a.status==='active' ? STATUS_COLORS[a.severity].bg+' bg-opacity-20 '+STATUS_COLORS[a.severity].text : 'bg-emerald-500/20 text-emerald-400'}">
+          ${a.status.toUpperCase()}
+        </span>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ============ GROUPS ============
+function renderGroups() {
+  const list = document.getElementById('groupsList');
+  list.innerHTML = groups.map(g => `
+    <button onclick="selectGroup(${g.id})" class="group-item w-full p-4 rounded-lg text-left bg-slate-700/30 hover:bg-slate-700/50 border border-transparent" data-id="${g.id}">
+      <div class="flex items-center justify-between mb-2">
+        <span class="font-medium">${g.name}</span>
+        <span class="px-2 py-0.5 rounded text-xs uppercase ${g.state==='on'?'bg-emerald-500/20 text-emerald-400':'bg-slate-600 text-slate-400'}">${g.state}</span>
+      </div>
+      <div class="text-sm text-slate-400">${g.circuits} circuits • ${g.cabinets.length} cabinets</div>
+    </button>
+  `).join('');
+}
+
+function selectGroup(id) {
+  const g = groups.find(x => x.id === id);
+  document.querySelectorAll('.group-item').forEach(el => {
+    el.classList.remove('bg-emerald-500/20', 'border-emerald-500/50');
+    el.classList.add('bg-slate-700/30', 'border-transparent');
+  });
+  document.querySelector(`[data-id="${id}"]`).classList.add('bg-emerald-500/20', 'border-emerald-500/50');
+  
+  document.getElementById('groupDetail').innerHTML = `
+    <h3 class="text-lg font-semibold mb-4">${g.name}</h3>
+    <div class="flex gap-2 mb-4">
+      <button class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg">All ON</button>
+      <button class="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg">All OFF</button>
+    </div>
+    <div class="space-y-2">
+      ${g.cabinets.map(id => {
+        const cab = cabinets.find(c => c.id === id);
+        return `<div class="flex items-center justify-between p-3 bg-slate-900/30 rounded-lg">
+          <div class="flex items-center gap-3"><span class="w-2 h-2 rounded-full ${STATUS_COLORS[cab.status].bg}"></span><span>${cab.name}</span></div>
+          <span class="text-slate-400 text-sm">${cab.circuits} circuits</span>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+// ============ MODAL ============
+let modalCallback = null;
+
+function showModal(title, message, callback) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalMessage').textContent = message;
+  document.getElementById('confirmModal').classList.remove('hidden');
+  modalCallback = callback;
+}
+
+function closeModal() {
+  document.getElementById('confirmModal').classList.add('hidden');
+  modalCallback = null;
+}
+
+document.getElementById('modalConfirm').addEventListener('click', () => {
+  if (modalCallback) modalCallback();
+  closeModal();
+});
+
+// ============ SEARCH ============
+document.getElementById('searchCabinet')?.addEventListener('input', (e) => {
+  const q = e.target.value.toLowerCase();
+  document.querySelectorAll('.cabinet-item').forEach(el => {
+    const id = el.dataset.id;
+    const cab = cabinets.find(c => c.id === id);
+    el.style.display = (cab.name.toLowerCase().includes(q) || cab.id.toLowerCase().includes(q)) ? '' : 'none';
+  });
+});
+</script>
+</body>
+</html>
