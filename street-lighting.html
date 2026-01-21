@@ -120,28 +120,28 @@
               <span class="text-slate-400 text-sm uppercase tracking-wider">Active Cabinets</span>
               <div class="p-2 rounded-lg bg-emerald-500/20"><svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"/></svg></div>
             </div>
-            <div class="text-3xl font-mono font-bold">5/6</div>
+            <div id="statActiveCabinets" class="text-3xl font-mono font-bold">-/-</div>
           </div>
           <div class="bg-slate-800/50 border border-slate-700/50 rounded-lg p-5">
             <div class="flex justify-between mb-3">
               <span class="text-slate-400 text-sm uppercase tracking-wider">Lights ON</span>
               <div class="p-2 rounded-lg bg-emerald-500/20"><svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
             </div>
-            <div class="text-3xl font-mono font-bold">78%</div>
+            <div id="statLightsOn" class="text-3xl font-mono font-bold">-%</div>
           </div>
           <div class="bg-slate-800/50 border border-slate-700/50 rounded-lg p-5">
             <div class="flex justify-between mb-3">
               <span class="text-slate-400 text-sm uppercase tracking-wider">Power</span>
               <div class="p-2 rounded-lg bg-emerald-500/20"><svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
             </div>
-            <div class="text-3xl font-mono font-bold">46.1 <span class="text-sm text-slate-400">kW</span></div>
+            <div id="statPower" class="text-3xl font-mono font-bold">- <span class="text-sm text-slate-400">kW</span></div>
           </div>
           <div class="bg-slate-800/50 border border-slate-700/50 rounded-lg p-5">
             <div class="flex justify-between mb-3">
               <span class="text-slate-400 text-sm uppercase tracking-wider">Alarms</span>
               <div class="p-2 rounded-lg bg-amber-500/20"><svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></div>
             </div>
-            <div class="text-3xl font-mono font-bold text-amber-400">3</div>
+            <div id="statAlarms" class="text-3xl font-mono font-bold text-amber-400">-</div>
           </div>
         </div>
         
@@ -584,25 +584,74 @@ function createMarkerIcon(color, isSelected = false) {
   });
 }
 
+let dashboardMarkers = [];
+
 function initDashboardMap() {
-  if (dashboardMap) return;
+  // Always update stats
+  updateDashboardStats();
+
+  if (dashboardMap) {
+    // Refresh markers for any new/updated cabinets
+    refreshDashboardMarkers();
+    return;
+  }
+
   dashboardMap = L.map('dashboardMap', { zoomControl: false, attributionControl: false }).setView(MAP_CENTER, 12);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(dashboardMap);
+  refreshDashboardMarkers();
+}
+
+function refreshDashboardMarkers() {
+  // Clear existing markers
+  dashboardMarkers.forEach(m => dashboardMap.removeLayer(m));
+  dashboardMarkers = [];
+
+  // Add markers for all cabinets
   cabinets.forEach(cab => {
-    L.marker(cab.coords, { icon: createMarkerIcon(STATUS_COLORS[cab.status].hex) })
+    const marker = L.marker(cab.coords, { icon: createMarkerIcon(STATUS_COLORS[cab.status].hex) })
       .addTo(dashboardMap)
       .on('click', () => { showScreen('map'); selectCabinet(cab); });
+    dashboardMarkers.push(marker);
   });
 }
 
+function updateDashboardStats() {
+  const total = cabinets.length;
+  const active = cabinets.filter(c => c.status !== 'offline').length;
+  const totalPower = cabinets.reduce((sum, c) => sum + (c.power || 0), 0);
+  const lightsOnPercent = total > 0 ? Math.round((active / total) * 100) : 0;
+  const alarmCount = cabinets.filter(c => c.status === 'critical' || c.status === 'warning').length;
+
+  document.getElementById('statActiveCabinets').textContent = `${active}/${total}`;
+  document.getElementById('statLightsOn').textContent = `${lightsOnPercent}%`;
+  document.getElementById('statPower').innerHTML = `${totalPower.toFixed(1)} <span class="text-sm text-slate-400">kW</span>`;
+  document.getElementById('statAlarms').textContent = alarmCount;
+}
+
 function initMainMap() {
-  if (mainMap) { mainMap.invalidateSize(); return; }
-  
+  if (mainMap) {
+    mainMap.invalidateSize();
+    // Refresh markers for any new/updated cabinets
+    refreshMapMarkers();
+    renderCabinetList();
+    return;
+  }
+
   mainMap = L.map('mainMap').setView(MAP_CENTER, 14);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; CARTO'
   }).addTo(mainMap);
-  
+
+  refreshMapMarkers();
+  renderCabinetList();
+}
+
+function refreshMapMarkers() {
+  // Clear existing markers
+  markers.forEach(m => mainMap.removeLayer(m));
+  markers = [];
+
+  // Add markers for all cabinets
   cabinets.forEach(cab => {
     const marker = L.marker(cab.coords, { icon: createMarkerIcon(STATUS_COLORS[cab.status].hex) })
       .addTo(mainMap)
@@ -610,8 +659,6 @@ function initMainMap() {
     marker.cabinetId = cab.id;
     markers.push(marker);
   });
-  
-  renderCabinetList();
 }
 
 function renderCabinetList() {
