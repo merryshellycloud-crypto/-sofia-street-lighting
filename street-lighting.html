@@ -1281,7 +1281,10 @@ function addCLRange(data = null) {
         </div>
       </div>
       <div class="grid grid-cols-4 gap-1">
-        <input type="text" name="clStreet_${index}" class="col-span-4 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" placeholder="Street name" value="${data?.street || ''}" onclick="event.stopPropagation()">
+        <div class="col-span-4 relative">
+          <input type="text" name="clStreet_${index}" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" placeholder="Type street name..." value="${data?.street || ''}" onclick="event.stopPropagation()" oninput="searchCLStreet(${index}, this.value)" autocomplete="off">
+          <div id="clStreetSuggestions_${index}" class="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-32 overflow-y-auto hidden"></div>
+        </div>
         <input type="number" name="clFrom_${index}" class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" placeholder="From" value="${data?.from || ''}" onclick="event.stopPropagation()">
         <input type="number" name="clTo_${index}" class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" placeholder="To" value="${data?.to || ''}" onclick="event.stopPropagation()">
         <select name="clState_${index}" class="col-span-2 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" onclick="event.stopPropagation()">
@@ -1301,6 +1304,65 @@ function addCLRange(data = null) {
     setTimeout(() => selectCLRangeForDrawing(index), 100);
   }
 }
+
+// CL Street autocomplete
+let clStreetSearchTimeout = null;
+
+async function searchCLStreet(index, query) {
+  const suggestionsDiv = document.getElementById(`clStreetSuggestions_${index}`);
+  if (clStreetSearchTimeout) clearTimeout(clStreetSearchTimeout);
+
+  if (query.length < 2) {
+    suggestionsDiv.classList.add('hidden');
+    return;
+  }
+
+  clStreetSearchTimeout = setTimeout(async () => {
+    const city = document.getElementById('epCity').value.trim();
+    let searchQuery = query;
+    if (city) searchQuery += ', ' + city.split(',')[0];
+
+    try {
+      let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5&addressdetails=1`;
+      if (selectedCityBounds) url += `&viewbox=${selectedCityBounds.viewbox}&bounded=0`;
+
+      const response = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+      const results = await response.json();
+
+      if (results.length === 0) {
+        suggestionsDiv.innerHTML = '<div class="p-2 text-slate-500 text-xs">No results</div>';
+        suggestionsDiv.classList.remove('hidden');
+        return;
+      }
+
+      suggestionsDiv.innerHTML = results.map(place => {
+        const streetName = place.address?.road || place.address?.pedestrian || place.address?.neighbourhood || place.display_name.split(',')[0];
+        return `<button type="button" class="w-full text-left p-2 hover:bg-slate-700 text-xs border-b border-slate-700/50 last:border-0" onclick="event.stopPropagation(); selectCLStreet(${index}, '${streetName.replace(/'/g, "\\'")}', ${place.lat}, ${place.lon})">
+          <div class="text-white">${streetName}</div>
+          <div class="text-slate-500 text-[10px] truncate">${place.display_name.split(',').slice(1, 3).join(',')}</div>
+        </button>`;
+      }).join('');
+      suggestionsDiv.classList.remove('hidden');
+    } catch (error) {
+      suggestionsDiv.innerHTML = '<div class="p-2 text-red-400 text-xs">Error</div>';
+      suggestionsDiv.classList.remove('hidden');
+    }
+  }, 400);
+}
+
+function selectCLStreet(index, streetName, lat, lon) {
+  document.querySelector(`[name="clStreet_${index}"]`).value = streetName;
+  document.getElementById(`clStreetSuggestions_${index}`).classList.add('hidden');
+  if (epDrawMap) epDrawMap.setView([lat, lon], 17);
+  selectCLRangeForDrawing(index);
+}
+
+// Hide CL suggestions on outside click
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('[name^="clStreet_"]')) {
+    document.querySelectorAll('[id^="clStreetSuggestions_"]').forEach(div => div.classList.add('hidden'));
+  }
+});
 
 function removeCLRange(index) {
   const range = document.querySelector(`.cl-range[data-index="${index}"]`);
