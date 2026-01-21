@@ -663,6 +663,7 @@ function selectCabinet(cab) {
   // Draw CL street lines with state-based colors
   if (cab.clRanges && cab.clRanges.length > 0) {
     cab.clRanges.forEach(cl => {
+      // If coordinates are drawn, show the route line
       if (cl.coords && cl.coords.length > 1) {
         const line = L.polyline(cl.coords, {
           color: CL_STATE_COLORS[cl.state]?.hex || STATUS_COLORS[cab.status].hex,
@@ -672,6 +673,20 @@ function selectCabinet(cab) {
         }).addTo(mainMap);
         line.bindTooltip(`${cl.street} (№${cl.from}-${cl.to}) - ${CL_STATE_COLORS[cl.state]?.label || 'UNKNOWN'}`, { permanent: false, sticky: true });
         currentCLLines.push(line);
+      }
+      // If no coordinates drawn but has street info, show a dashed indicator line from EP
+      else if (cl.street) {
+        // Create a small indicator showing there's a CL range without drawn route
+        const indicator = L.circleMarker(cab.coords, {
+          radius: 20,
+          fillColor: 'transparent',
+          fillOpacity: 0,
+          color: CL_STATE_COLORS[cl.state]?.hex || '#64748b',
+          weight: 2,
+          dashArray: '5, 5'
+        }).addTo(mainMap);
+        indicator.bindTooltip(`${cl.street} (№${cl.from || '?'}-${cl.to || '?'}) - No route drawn`, { permanent: false, sticky: true });
+        currentCLLines.push(indicator);
       }
     });
   }
