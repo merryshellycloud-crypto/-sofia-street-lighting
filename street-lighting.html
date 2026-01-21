@@ -1076,7 +1076,7 @@ function selectAddress(lat, lon, displayName) {
 
 // Recalculate coordinates from full address
 async function recalculateCoordinates() {
-  const city = document.getElementById('epCity').value.trim();
+  const city = document.getElementById('epCity').value.trim() || 'София';
   const address = document.getElementById('epAddress').value.trim();
   const building = document.getElementById('epBuilding').value.trim();
   const district = document.getElementById('epDistrict').value.trim();
@@ -1084,26 +1084,6 @@ async function recalculateCoordinates() {
   if (!address && !district) {
     alert('Please enter an address or district first');
     return;
-  }
-
-  // Build full address string - optimized for Bulgarian addresses
-  let fullAddress = '';
-
-  // For Bulgarian residential complexes (жк), format as "жк [district] блок [number]"
-  if (district && building) {
-    fullAddress = `жк ${district} блок ${building}, Sofia, Bulgaria`;
-  } else if (address && building) {
-    // Street address with building number
-    fullAddress = `${address} ${building}, ${district ? district + ', ' : ''}${city}`;
-  } else if (district) {
-    // Just district/area
-    fullAddress = `${district}, ${city}`;
-  } else {
-    // Fallback to basic format
-    if (building) fullAddress += 'блок ' + building + ', ';
-    if (address) fullAddress += address;
-    if (district) fullAddress += ', ' + district;
-    if (city) fullAddress += ', ' + city;
   }
 
   // Show loading state
@@ -1114,37 +1094,70 @@ async function recalculateCoordinates() {
   latInput.placeholder = 'Searching...';
   lngInput.placeholder = 'Searching...';
 
-  try {
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}&limit=1&addressdetails=1`,
-      { headers: { 'Accept-Language': 'en' } }
-    );
-    const results = await response.json();
+  // Build multiple search queries optimized for Sofia, Bulgaria
+  const searchQueries = [];
 
-    if (results.length > 0) {
-      const lat = parseFloat(results[0].lat);
-      const lon = parseFloat(results[0].lon);
-
-      latInput.value = lat;
-      lngInput.value = lon;
-      latInput.placeholder = '--';
-      lngInput.placeholder = '--';
-
-      // Update map
-      if (epDrawMap) {
-        epDrawMap.setView([lat, lon], 16);
-        updateEPMarker();
-      }
-    } else {
-      latInput.placeholder = 'Not found';
-      lngInput.placeholder = 'Not found';
-      alert('Could not find coordinates for this address. Try selecting from the address suggestions.');
-    }
-  } catch (error) {
-    latInput.placeholder = 'Error';
-    lngInput.placeholder = 'Error';
-    alert('Error looking up coordinates. Please try again.');
+  // For residential complexes (жк) with block numbers - most common in Sofia
+  if (district && building) {
+    // Try Bulgarian format first
+    searchQueries.push(`жк ${district} блок ${building}, София, България`);
+    searchQueries.push(`${district} блок ${building}, София`);
+    searchQueries.push(`блок ${building}, ${district}, София`);
   }
+
+  // Street address with building number
+  if (address && building) {
+    searchQueries.push(`${address} ${building}, София, България`);
+    searchQueries.push(`ул. ${address} ${building}, София`);
+  }
+
+  // Street address only
+  if (address) {
+    searchQueries.push(`${address}, ${district ? district + ', ' : ''}София, България`);
+  }
+
+  // District/neighborhood only
+  if (district) {
+    searchQueries.push(`жк ${district}, София, България`);
+    searchQueries.push(`${district}, София, България`);
+  }
+
+  // Try each query until we get a result
+  for (const query of searchQueries) {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&addressdetails=1&countrycodes=bg`,
+        { headers: { 'Accept-Language': 'bg,en' } }
+      );
+      const results = await response.json();
+
+      if (results.length > 0) {
+        const lat = parseFloat(results[0].lat);
+        const lon = parseFloat(results[0].lon);
+
+        latInput.value = lat;
+        lngInput.value = lon;
+        latInput.placeholder = '--';
+        lngInput.placeholder = '--';
+
+        // Update map
+        if (epDrawMap) {
+          epDrawMap.setView([lat, lon], 16);
+          updateEPMarker();
+        }
+
+        console.log('Found coordinates using query:', query);
+        return; // Success - exit function
+      }
+    } catch (e) {
+      console.warn('Search failed for:', query, e);
+    }
+  }
+
+  // If we get here, no results found
+  latInput.placeholder = 'Not found';
+  lngInput.placeholder = 'Not found';
+  alert('Could not find coordinates. Try:\n- Using Bulgarian spelling (Люлин, Младост)\n- Checking the district name\n- Or manually position on the map');
 }
 
 // Initialize autocomplete when modal opens
