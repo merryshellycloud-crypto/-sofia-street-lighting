@@ -1103,29 +1103,45 @@ async function recalculateCoordinates() {
   // Build multiple search queries optimized for Sofia, Bulgaria
   const searchQueries = [];
 
+  // Combine address + district for Sofia residential complexes (e.g., "Lyulin" + "5" = "Lyulin 5")
+  const neighborhood = address && district ? `${address} ${district}` : (address || district);
+
   // For residential complexes (жк) with block numbers - most common in Sofia
-  if (district && building) {
-    // Try Bulgarian format first
-    searchQueries.push(`жк ${district} блок ${building}, София, България`);
-    searchQueries.push(`${district} блок ${building}, София`);
-    searchQueries.push(`блок ${building}, ${district}, София`);
+  if (neighborhood && building) {
+    // Try multiple Bulgarian formats - prioritize specific block searches
+    searchQueries.push(`блок ${building}, жк ${neighborhood}, София`);
+    searchQueries.push(`жк ${neighborhood} блок ${building}, София, България`);
+    searchQueries.push(`${neighborhood} блок ${building}, София`);
+    searchQueries.push(`блок ${building}, ${neighborhood}, София`);
+    searchQueries.push(`бл. ${building}, жк ${neighborhood}, София`);
+    // Also try with Cyrillic "Люлин" if user typed "Lyulin"
+    const cyrillicNeighborhood = neighborhood
+      .replace(/Lyulin/i, 'Люлин')
+      .replace(/Mladost/i, 'Младост')
+      .replace(/Nadezhda/i, 'Надежда')
+      .replace(/Druzhba/i, 'Дружба')
+      .replace(/Ovcha Kupel/i, 'Овча Купел')
+      .replace(/Banishora/i, 'Банишора')
+      .replace(/Hipodruma/i, 'Хиподрума')
+      .replace(/Krasno selo/i, 'Красно село')
+      .replace(/Lozenets/i, 'Лозенец')
+      .replace(/Borovo/i, 'Борово');
+    if (cyrillicNeighborhood !== neighborhood) {
+      searchQueries.push(`блок ${building}, жк ${cyrillicNeighborhood}, София`);
+      searchQueries.push(`жк ${cyrillicNeighborhood} блок ${building}, София`);
+    }
   }
 
-  // Street address with building number
-  if (address && building) {
+  // Just neighborhood (residential complex) without specific block
+  if (neighborhood && !building) {
+    searchQueries.push(`жк ${neighborhood}, София, България`);
+    searchQueries.push(`${neighborhood}, София, България`);
+  }
+
+  // Street address with building number (for actual streets, not residential complexes)
+  if (address && building && !district) {
+    searchQueries.push(`ул. ${address} ${building}, София, България`);
     searchQueries.push(`${address} ${building}, София, България`);
-    searchQueries.push(`ул. ${address} ${building}, София`);
-  }
-
-  // Street address only
-  if (address) {
-    searchQueries.push(`${address}, ${district ? district + ', ' : ''}София, България`);
-  }
-
-  // District/neighborhood only
-  if (district) {
-    searchQueries.push(`жк ${district}, София, България`);
-    searchQueries.push(`${district}, София, България`);
   }
 
   // Try each query until we get a result
