@@ -287,110 +287,125 @@
     </main>
   </div>
 
-  <!-- EP Add/Edit Modal -->
+  <!-- EP Add/Edit Modal - Refactored with integrated map -->
   <div id="epModal" class="fixed inset-0 z-[9999] flex items-center justify-center hidden">
     <div class="absolute inset-0 bg-black/70" onclick="closeEPModal()"></div>
-    <div class="relative bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center mb-4">
+    <div class="relative bg-slate-800 border border-slate-700 rounded-xl w-[95vw] max-w-6xl mx-4 max-h-[95vh] overflow-hidden flex flex-col">
+      <!-- Header -->
+      <div class="flex justify-between items-center p-4 border-b border-slate-700">
         <h3 id="epModalTitle" class="text-xl font-semibold">Add Electrical Panel</h3>
         <button onclick="closeEPModal()" class="p-2 hover:bg-slate-700 rounded-lg">
           <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
-      <form id="epForm" class="space-y-4">
-        <input type="hidden" id="epEditId">
-        <div>
-          <label class="block text-sm font-medium text-slate-300 mb-2">Panel Name</label>
-          <input type="text" id="epName" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="e.g., Vitosha Blvd Hub" required>
+
+      <!-- Content - Two Column Layout -->
+      <div class="flex flex-1 overflow-hidden">
+        <!-- Left Column - Form -->
+        <div class="w-1/2 p-4 overflow-y-auto border-r border-slate-700">
+          <form id="epForm" class="space-y-4">
+            <input type="hidden" id="epEditId">
+
+            <!-- Panel Info Section -->
+            <div class="bg-slate-900/30 rounded-lg p-4">
+              <h4 class="text-sm font-medium text-emerald-400 mb-3">Panel Information</h4>
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs font-medium text-slate-400 mb-1">Panel Name</label>
+                  <input type="text" id="epName" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="e.g., Vitosha Blvd Hub" required>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-400 mb-1">City</label>
+                  <div class="relative">
+                    <input type="text" id="epCity" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="e.g., Sofia, Bulgaria" value="Sofia, Bulgaria" autocomplete="off">
+                    <div id="citySuggestions" class="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto hidden"></div>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-400 mb-1">Street Address</label>
+                  <div class="relative">
+                    <input type="text" id="epAddress" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="Start typing street name..." autocomplete="off" required>
+                    <div id="addressSuggestions" class="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto hidden"></div>
+                    <div id="addressLoading" class="absolute right-3 top-2 hidden">
+                      <svg class="w-4 h-4 text-emerald-400 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </div>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Building / Block №</label>
+                    <input type="text" id="epBuilding" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="536, 12A">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">District / Area</label>
+                    <input type="text" id="epDistrict" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="Lyulin, Center">
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Latitude</label>
+                    <input type="number" step="any" id="epLat" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="42.6936" required>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Longitude</label>
+                    <input type="number" step="any" id="epLng" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="23.3203" required>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-400 mb-1">Status</label>
+                  <select id="epStatus" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500">
+                    <option value="ok">OK (Online)</option>
+                    <option value="warning">Warning</option>
+                    <option value="critical">Critical</option>
+                    <option value="offline">Offline</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- CL Street Ranges Section -->
+            <div class="bg-slate-900/30 rounded-lg p-4">
+              <div class="flex justify-between items-center mb-3">
+                <h4 class="text-sm font-medium text-emerald-400">City Lights (CL) Street Ranges</h4>
+                <button type="button" onclick="addCLRange()" class="text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                  Add Street
+                </button>
+              </div>
+              <div id="clRangesContainer" class="space-y-2 max-h-48 overflow-y-auto"></div>
+              <p class="text-xs text-slate-500 mt-2">Select a street range and draw its route on the map →</p>
+            </div>
+          </form>
         </div>
-        <div>
-          <label class="block text-sm font-medium text-slate-300 mb-2">City</label>
-          <div class="relative">
-            <input type="text" id="epCity" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="e.g., Sofia, Bulgaria" value="Sofia, Bulgaria" autocomplete="off">
-            <div id="citySuggestions" class="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto hidden"></div>
-          </div>
-          <p class="text-xs text-slate-500 mt-1">Select city first to filter street suggestions</p>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-slate-300 mb-2">Panel Address</label>
-          <div class="relative">
-            <input type="text" id="epAddress" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="Start typing street name..." autocomplete="off" required>
-            <div id="addressSuggestions" class="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto hidden"></div>
-            <div id="addressLoading" class="absolute right-3 top-3 hidden">
-              <svg class="w-5 h-5 text-emerald-400 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+
+        <!-- Right Column - Map -->
+        <div class="w-1/2 flex flex-col bg-slate-900/50">
+          <div class="p-3 border-b border-slate-700 flex justify-between items-center">
+            <div>
+              <h4 class="text-sm font-medium text-white">Route Drawing Map</h4>
+              <p id="mapDrawingInfo" class="text-xs text-slate-400">Click on a street range, then draw on map</p>
+            </div>
+            <div class="flex gap-2">
+              <button type="button" onclick="undoStreetPoint()" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-white text-xs rounded">Undo</button>
+              <button type="button" onclick="clearStreetDraw()" class="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-xs rounded">Clear</button>
             </div>
           </div>
-          <p class="text-xs text-slate-500 mt-1">Select street, then add building number below</p>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-slate-300 mb-2">Building / Block №</label>
-            <input type="text" id="epBuilding" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="e.g., 536, 12A">
+          <div id="epDrawMap" class="flex-1 min-h-[400px]"></div>
+          <div class="p-2 border-t border-slate-700 flex justify-between items-center text-xs">
+            <span class="text-slate-400">Points: <span id="drawPointCount" class="text-emerald-400 font-mono">0</span></span>
+            <div class="flex gap-3">
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Start</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Path</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> End</span>
+            </div>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-slate-300 mb-2">District / Area</label>
-            <input type="text" id="epDistrict" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="e.g., Lyulin, Center">
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-slate-300 mb-2">Latitude</label>
-            <input type="number" step="any" id="epLat" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="42.6936" required>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-slate-300 mb-2">Longitude</label>
-            <input type="number" step="any" id="epLng" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="23.3203" required>
-          </div>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-slate-300 mb-2">Status</label>
-          <select id="epStatus" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-emerald-500">
-            <option value="ok">OK (Online)</option>
-            <option value="warning">Warning</option>
-            <option value="critical">Critical</option>
-            <option value="offline">Offline</option>
-          </select>
-        </div>
-        <div>
-          <div class="flex justify-between items-center mb-2">
-            <label class="block text-sm font-medium text-slate-300">City Lights (CL) Street Ranges</label>
-            <button type="button" onclick="addCLRange()" class="text-emerald-400 hover:text-emerald-300 text-sm flex items-center gap-1">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-              Add Street
-            </button>
-          </div>
-          <div id="clRangesContainer" class="space-y-3"></div>
-        </div>
-        <div class="flex gap-3 pt-4">
-          <button type="button" onclick="closeEPModal()" class="flex-1 px-4 py-2.5 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700">Cancel</button>
-          <button type="submit" class="flex-1 px-4 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-medium">Save Panel</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Street Drawing Modal -->
-  <div id="streetDrawModal" class="fixed inset-0 z-[9998] flex items-center justify-center hidden">
-    <div class="absolute inset-0 bg-black/80" onclick="closeStreetDrawModal()"></div>
-    <div class="relative bg-slate-800 border border-slate-700 rounded-xl p-4 w-[90vw] max-w-4xl mx-4">
-      <div class="flex justify-between items-center mb-3">
-        <div>
-          <h3 class="text-lg font-semibold">Draw Street Route</h3>
-          <p id="streetDrawInfo" class="text-slate-400 text-sm">Click on map to add points. Double-click to finish.</p>
-        </div>
-        <div class="flex gap-2">
-          <button onclick="clearStreetDraw()" class="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-sm rounded-lg">Clear</button>
-          <button onclick="undoStreetPoint()" class="px-3 py-1.5 bg-slate-600 hover:bg-slate-500 text-white text-sm rounded-lg">Undo</button>
-          <button onclick="saveStreetDraw()" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg">Save Route</button>
-          <button onclick="closeStreetDrawModal()" class="p-1.5 hover:bg-slate-700 rounded-lg">
-            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>
         </div>
       </div>
-      <div id="streetDrawMap" class="h-[60vh] rounded-lg border border-slate-700"></div>
-      <div class="mt-3 flex items-center justify-between text-sm">
-        <span class="text-slate-400">Points: <span id="streetPointCount" class="text-emerald-400 font-mono">0</span></span>
-        <span class="text-slate-500">Tip: Follow the actual street path for accurate visualization</span>
+
+      <!-- Footer - Save Button -->
+      <div class="p-4 border-t border-slate-700 flex justify-end gap-3">
+        <button type="button" onclick="closeEPModal()" class="px-6 py-2.5 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700">Cancel</button>
+        <button type="button" onclick="saveEPForm()" class="px-8 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-medium">Save Electrical Panel</button>
       </div>
     </div>
   </div>
@@ -971,6 +986,12 @@ function selectAddress(lat, lon, displayName) {
   document.getElementById('epLat').value = lat;
   document.getElementById('epLng').value = lon;
   document.getElementById('addressSuggestions').classList.add('hidden');
+
+  // Update map view and EP marker
+  if (epDrawMap) {
+    epDrawMap.setView([lat, lon], 16);
+    updateEPMarker();
+  }
 }
 
 // Initialize autocomplete when modal opens
@@ -1131,6 +1152,7 @@ function openEPModal(editId = null) {
   document.getElementById('clRangesContainer').innerHTML = '';
   document.getElementById('addressSuggestions').classList.add('hidden');
   clRangeCount = 0;
+  resetDrawingState();
 
   if (editId) {
     const ep = cabinets.find(c => c.id === editId);
@@ -1158,10 +1180,19 @@ function openEPModal(editId = null) {
 
   modal.classList.remove('hidden');
   initAddressAutocomplete();
+
+  // Initialize map after modal is visible
+  setTimeout(() => {
+    initEPDrawMap();
+    if (document.querySelectorAll('.cl-range').length > 0) {
+      selectCLRangeForDrawing(0);
+    }
+  }, 200);
 }
 
 function closeEPModal() {
   document.getElementById('epModal').classList.add('hidden');
+  resetDrawingState();
 }
 
 function addCLRange(data = null) {
@@ -1170,33 +1201,34 @@ function addCLRange(data = null) {
 
   const coordsCount = data?.coords?.length || 0;
   const rangeHtml = `
-    <div class="cl-range bg-slate-900/30 rounded-lg p-3" data-index="${index}">
+    <div class="cl-range bg-slate-800/50 rounded-lg p-2 border border-transparent cursor-pointer hover:border-slate-600" data-index="${index}" onclick="selectCLRangeForDrawing(${index})">
       <div class="flex justify-between items-center mb-2">
-        <span class="text-xs text-slate-400">Street Range ${index + 1}</span>
-        <button type="button" onclick="removeCLRange(${index})" class="text-red-400 hover:text-red-300 text-xs">Remove</button>
+        <span class="text-xs text-slate-400">Street ${index + 1}</span>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-emerald-400 cl-coords-count" data-index="${index}">${coordsCount} pts</span>
+          <button type="button" onclick="event.stopPropagation(); removeCLRange(${index})" class="text-red-400 hover:text-red-300 text-xs">✕</button>
+        </div>
       </div>
-      <div class="grid grid-cols-3 gap-2 mb-2">
-        <input type="text" name="clStreet_${index}" class="col-span-3 bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white placeholder-slate-500" placeholder="Street name" value="${data?.street || ''}">
-        <input type="number" name="clFrom_${index}" class="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white placeholder-slate-500" placeholder="From №" value="${data?.from || ''}">
-        <input type="number" name="clTo_${index}" class="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white placeholder-slate-500" placeholder="To №" value="${data?.to || ''}">
-        <select name="clState_${index}" class="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white">
+      <div class="grid grid-cols-4 gap-1">
+        <input type="text" name="clStreet_${index}" class="col-span-4 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" placeholder="Street name" value="${data?.street || ''}" onclick="event.stopPropagation()">
+        <input type="number" name="clFrom_${index}" class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" placeholder="From" value="${data?.from || ''}" onclick="event.stopPropagation()">
+        <input type="number" name="clTo_${index}" class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" placeholder="To" value="${data?.to || ''}" onclick="event.stopPropagation()">
+        <select name="clState_${index}" class="col-span-2 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" onclick="event.stopPropagation()">
           <option value="ok" ${data?.state === 'ok' ? 'selected' : ''}>OK</option>
           <option value="warning" ${data?.state === 'warning' ? 'selected' : ''}>Warning</option>
           <option value="critical" ${data?.state === 'critical' ? 'selected' : ''}>Critical</option>
           <option value="offline" ${data?.state === 'offline' ? 'selected' : ''}>Offline</option>
         </select>
       </div>
-      <div class="flex items-center justify-between">
-        <button type="button" onclick="openStreetDrawModal(${index})" class="text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
-          Draw Route on Map
-        </button>
-        <span class="text-xs text-slate-500 cl-coords-count" data-index="${index}">${coordsCount} points</span>
-      </div>
       <input type="hidden" name="clCoords_${index}" value='${JSON.stringify(data?.coords || [])}'>
     </div>
   `;
   container.insertAdjacentHTML('beforeend', rangeHtml);
+
+  // Auto-select for drawing if map is ready
+  if (epDrawMap) {
+    setTimeout(() => selectCLRangeForDrawing(index), 100);
+  }
 }
 
 function removeCLRange(index) {
@@ -1223,9 +1255,234 @@ function deleteEP(id) {
   }
 }
 
-// EP Form submit
-document.getElementById('epForm')?.addEventListener('submit', (e) => {
-  e.preventDefault();
+// EP Search
+document.getElementById('searchEP')?.addEventListener('input', (e) => {
+  const q = e.target.value.toLowerCase();
+  document.querySelectorAll('.ep-item').forEach(el => {
+    const id = el.dataset.id;
+    const ep = cabinets.find(c => c.id === id);
+    const match = ep.name.toLowerCase().includes(q) || ep.id.toLowerCase().includes(q) || (ep.address || '').toLowerCase().includes(q);
+    el.style.display = match ? '' : 'none';
+  });
+});
+
+// ============ INTEGRATED STREET DRAWING ============
+let epDrawMap = null;
+let epDrawLine = null;
+let epDrawPoints = [];
+let epDrawMarkers = [];
+let epMarker = null;
+let currentDrawingIndex = null;
+let allCLLines = []; // Store all CL lines for display
+
+function initEPDrawMap() {
+  const container = document.getElementById('epDrawMap');
+  if (!container) return;
+
+  // Get center from EP coordinates or use default
+  const epLat = parseFloat(document.getElementById('epLat')?.value) || MAP_CENTER[0];
+  const epLng = parseFloat(document.getElementById('epLng')?.value) || MAP_CENTER[1];
+
+  if (epDrawMap) {
+    epDrawMap.setView([epLat, epLng], 15);
+    updateEPMarker();
+    epDrawMap.invalidateSize();
+    return;
+  }
+
+  epDrawMap = L.map('epDrawMap').setView([epLat, epLng], 15);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; CARTO'
+  }).addTo(epDrawMap);
+
+  // Add EP marker
+  updateEPMarker();
+
+  // Click handler to add points
+  epDrawMap.on('click', (e) => {
+    if (currentDrawingIndex !== null) {
+      addDrawPoint(e.latlng.lat, e.latlng.lng);
+    }
+  });
+}
+
+function updateEPMarker() {
+  const epLat = parseFloat(document.getElementById('epLat')?.value) || MAP_CENTER[0];
+  const epLng = parseFloat(document.getElementById('epLng')?.value) || MAP_CENTER[1];
+
+  if (epMarker) {
+    epDrawMap.removeLayer(epMarker);
+  }
+
+  epMarker = L.marker([epLat, epLng], {
+    icon: createMarkerIcon('#10b981', true)
+  }).addTo(epDrawMap).bindTooltip('EP Location', { permanent: false });
+}
+
+function selectCLRangeForDrawing(index) {
+  // Save current drawing if switching
+  if (currentDrawingIndex !== null && currentDrawingIndex !== index) {
+    saveCurrentDrawing();
+  }
+
+  currentDrawingIndex = index;
+
+  // Highlight selected range in list
+  document.querySelectorAll('.cl-range').forEach(el => {
+    el.classList.remove('border-emerald-500', 'bg-emerald-500/10');
+    el.classList.add('border-transparent');
+  });
+  const selectedRange = document.querySelector(`.cl-range[data-index="${index}"]`);
+  if (selectedRange) {
+    selectedRange.classList.remove('border-transparent');
+    selectedRange.classList.add('border-emerald-500', 'bg-emerald-500/10');
+  }
+
+  // Load existing coords
+  const coordsInput = document.querySelector(`[name="clCoords_${index}"]`);
+  if (coordsInput) {
+    try {
+      epDrawPoints = JSON.parse(coordsInput.value) || [];
+    } catch (e) {
+      epDrawPoints = [];
+    }
+  } else {
+    epDrawPoints = [];
+  }
+
+  // Get street name for info
+  const streetName = document.querySelector(`[name="clStreet_${index}"]`)?.value || 'Street';
+  document.getElementById('mapDrawingInfo').textContent = `Drawing: ${streetName}. Click on map to add points.`;
+
+  updateDrawLine();
+  showAllCLLines();
+}
+
+function addDrawPoint(lat, lng) {
+  if (currentDrawingIndex === null) return;
+
+  epDrawPoints.push([lat, lng]);
+  updateDrawLine();
+  saveCurrentDrawing();
+}
+
+function updateDrawLine() {
+  // Remove existing drawing elements
+  if (epDrawLine) epDrawMap.removeLayer(epDrawLine);
+  epDrawMarkers.forEach(m => epDrawMap.removeLayer(m));
+  epDrawMarkers = [];
+
+  // Add markers for current drawing points
+  epDrawPoints.forEach((point, i) => {
+    const marker = L.circleMarker(point, {
+      radius: 6,
+      fillColor: i === 0 ? '#f59e0b' : i === epDrawPoints.length - 1 ? '#ef4444' : '#10b981',
+      fillOpacity: 1,
+      color: '#fff',
+      weight: 2
+    }).addTo(epDrawMap);
+    marker.bindTooltip(`Point ${i + 1}`, { permanent: false });
+    epDrawMarkers.push(marker);
+  });
+
+  // Draw line if we have at least 2 points
+  if (epDrawPoints.length >= 2) {
+    epDrawLine = L.polyline(epDrawPoints, {
+      color: '#10b981',
+      weight: 6,
+      opacity: 0.9,
+      lineCap: 'round'
+    }).addTo(epDrawMap);
+  }
+
+  document.getElementById('drawPointCount').textContent = epDrawPoints.length;
+}
+
+function showAllCLLines() {
+  // Clear existing CL lines
+  allCLLines.forEach(line => epDrawMap.removeLayer(line));
+  allCLLines = [];
+
+  // Show all CL range lines (except current one being edited)
+  document.querySelectorAll('.cl-range').forEach(rangeEl => {
+    const idx = parseInt(rangeEl.dataset.index);
+    if (idx === currentDrawingIndex) return; // Skip current
+
+    const coordsInput = document.querySelector(`[name="clCoords_${idx}"]`);
+    const stateSelect = document.querySelector(`[name="clState_${idx}"]`);
+    if (coordsInput) {
+      try {
+        const coords = JSON.parse(coordsInput.value) || [];
+        const state = stateSelect?.value || 'ok';
+        if (coords.length >= 2) {
+          const line = L.polyline(coords, {
+            color: CL_STATE_COLORS[state]?.hex || '#64748b',
+            weight: 4,
+            opacity: 0.5,
+            lineCap: 'round'
+          }).addTo(epDrawMap);
+          allCLLines.push(line);
+        }
+      } catch (e) {}
+    }
+  });
+}
+
+function undoStreetPoint() {
+  if (epDrawPoints.length > 0) {
+    epDrawPoints.pop();
+    updateDrawLine();
+    saveCurrentDrawing();
+  }
+}
+
+function clearStreetDraw() {
+  epDrawPoints = [];
+  updateDrawLine();
+  saveCurrentDrawing();
+}
+
+function saveCurrentDrawing() {
+  if (currentDrawingIndex !== null) {
+    const coordsInput = document.querySelector(`[name="clCoords_${currentDrawingIndex}"]`);
+    if (coordsInput) {
+      coordsInput.value = JSON.stringify(epDrawPoints);
+    }
+
+    const countDisplay = document.querySelector(`.cl-coords-count[data-index="${currentDrawingIndex}"]`);
+    if (countDisplay) {
+      countDisplay.textContent = `${epDrawPoints.length} pts`;
+    }
+  }
+}
+
+function resetDrawingState() {
+  epDrawPoints = [];
+  epDrawMarkers.forEach(m => epDrawMap?.removeLayer(m));
+  epDrawMarkers = [];
+  if (epDrawLine) epDrawMap?.removeLayer(epDrawLine);
+  epDrawLine = null;
+  allCLLines.forEach(line => epDrawMap?.removeLayer(line));
+  allCLLines = [];
+  currentDrawingIndex = null;
+  if (document.getElementById('drawPointCount')) {
+    document.getElementById('drawPointCount').textContent = '0';
+  }
+  if (document.getElementById('mapDrawingInfo')) {
+    document.getElementById('mapDrawingInfo').textContent = 'Click on a street range, then draw on map';
+  }
+}
+
+// Save EP Form function (replaces form submit)
+function saveEPForm() {
+  const form = document.getElementById('epForm');
+  if (!form.checkValidity()) {
+    form.reportValidity();
+    return;
+  }
+
+  // Save current drawing first
+  saveCurrentDrawing();
 
   const editId = document.getElementById('epEditId').value;
   const name = document.getElementById('epName').value;
@@ -1246,7 +1503,6 @@ document.getElementById('epForm')?.addEventListener('submit', (e) => {
     const to = parseInt(document.querySelector(`[name="clTo_${idx}"]`)?.value);
     const state = document.querySelector(`[name="clState_${idx}"]`)?.value;
 
-    // Get drawn coords from hidden input
     let coords = [];
     const coordsInput = document.querySelector(`[name="clCoords_${idx}"]`);
     if (coordsInput) {
@@ -1263,7 +1519,6 @@ document.getElementById('epForm')?.addEventListener('submit', (e) => {
   });
 
   if (editId) {
-    // Update existing
     const ep = cabinets.find(c => c.id === editId);
     if (ep) {
       ep.name = name;
@@ -1276,7 +1531,6 @@ document.getElementById('epForm')?.addEventListener('submit', (e) => {
       ep.clRanges = clRanges;
     }
   } else {
-    // Add new
     const newId = 'CAB-' + String(cabinets.length + 1).padStart(3, '0');
     cabinets.push({
       id: newId,
@@ -1298,181 +1552,6 @@ document.getElementById('epForm')?.addEventListener('submit', (e) => {
   closeEPModal();
   renderEPList();
   if (editId) selectEP(editId);
-});
-
-// EP Search
-document.getElementById('searchEP')?.addEventListener('input', (e) => {
-  const q = e.target.value.toLowerCase();
-  document.querySelectorAll('.ep-item').forEach(el => {
-    const id = el.dataset.id;
-    const ep = cabinets.find(c => c.id === id);
-    const match = ep.name.toLowerCase().includes(q) || ep.id.toLowerCase().includes(q) || (ep.address || '').toLowerCase().includes(q);
-    el.style.display = match ? '' : 'none';
-  });
-});
-
-// ============ STREET DRAWING ============
-let streetDrawMap = null;
-let streetDrawLine = null;
-let streetDrawPoints = [];
-let streetDrawMarkers = [];
-let currentDrawingIndex = null;
-
-function openStreetDrawModal(rangeIndex) {
-  currentDrawingIndex = rangeIndex;
-  const modal = document.getElementById('streetDrawModal');
-  modal.classList.remove('hidden');
-
-  // Get existing coords if any
-  const coordsInput = document.querySelector(`[name="clCoords_${rangeIndex}"]`);
-  if (coordsInput) {
-    try {
-      streetDrawPoints = JSON.parse(coordsInput.value) || [];
-    } catch (e) {
-      streetDrawPoints = [];
-    }
-  }
-
-  // Get street name for info
-  const streetName = document.querySelector(`[name="clStreet_${rangeIndex}"]`)?.value || 'Street';
-  document.getElementById('streetDrawInfo').textContent = `Drawing route for: ${streetName}. Click on map to add points.`;
-
-  // Initialize or update map
-  setTimeout(() => {
-    initStreetDrawMap();
-    updateStreetDrawLine();
-  }, 100);
-}
-
-function initStreetDrawMap() {
-  const container = document.getElementById('streetDrawMap');
-  if (!container) return;
-
-  if (streetDrawMap) {
-    streetDrawMap.invalidateSize();
-    return;
-  }
-
-  // Get center from EP coordinates or use default
-  const epLat = parseFloat(document.getElementById('epLat')?.value) || MAP_CENTER[0];
-  const epLng = parseFloat(document.getElementById('epLng')?.value) || MAP_CENTER[1];
-
-  streetDrawMap = L.map('streetDrawMap').setView([epLat, epLng], 16);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; CARTO'
-  }).addTo(streetDrawMap);
-
-  // Add EP marker
-  L.marker([epLat, epLng], {
-    icon: createMarkerIcon('#10b981', true)
-  }).addTo(streetDrawMap).bindTooltip('EP Location', { permanent: false });
-
-  // Click handler to add points
-  streetDrawMap.on('click', (e) => {
-    addStreetPoint(e.latlng.lat, e.latlng.lng);
-  });
-
-  // Double-click to finish (optional)
-  streetDrawMap.on('dblclick', (e) => {
-    e.originalEvent.preventDefault();
-    saveStreetDraw();
-  });
-}
-
-function addStreetPoint(lat, lng) {
-  streetDrawPoints.push([lat, lng]);
-
-  // Add marker for the point
-  const marker = L.circleMarker([lat, lng], {
-    radius: 6,
-    fillColor: '#10b981',
-    fillOpacity: 1,
-    color: '#fff',
-    weight: 2
-  }).addTo(streetDrawMap);
-
-  marker.bindTooltip(`Point ${streetDrawPoints.length}`, { permanent: false });
-  streetDrawMarkers.push(marker);
-
-  updateStreetDrawLine();
-  document.getElementById('streetPointCount').textContent = streetDrawPoints.length;
-}
-
-function updateStreetDrawLine() {
-  // Remove existing line
-  if (streetDrawLine) {
-    streetDrawMap.removeLayer(streetDrawLine);
-  }
-
-  // Clear existing markers and re-add
-  streetDrawMarkers.forEach(m => streetDrawMap.removeLayer(m));
-  streetDrawMarkers = [];
-
-  // Add markers for all points
-  streetDrawPoints.forEach((point, i) => {
-    const marker = L.circleMarker(point, {
-      radius: 6,
-      fillColor: i === 0 ? '#f59e0b' : i === streetDrawPoints.length - 1 ? '#ef4444' : '#10b981',
-      fillOpacity: 1,
-      color: '#fff',
-      weight: 2
-    }).addTo(streetDrawMap);
-    marker.bindTooltip(`Point ${i + 1}${i === 0 ? ' (Start)' : i === streetDrawPoints.length - 1 ? ' (End)' : ''}`, { permanent: false });
-    streetDrawMarkers.push(marker);
-  });
-
-  // Draw line if we have at least 2 points
-  if (streetDrawPoints.length >= 2) {
-    streetDrawLine = L.polyline(streetDrawPoints, {
-      color: '#10b981',
-      weight: 6,
-      opacity: 0.8,
-      lineCap: 'round'
-    }).addTo(streetDrawMap);
-  }
-
-  document.getElementById('streetPointCount').textContent = streetDrawPoints.length;
-}
-
-function undoStreetPoint() {
-  if (streetDrawPoints.length > 0) {
-    streetDrawPoints.pop();
-    updateStreetDrawLine();
-  }
-}
-
-function clearStreetDraw() {
-  streetDrawPoints = [];
-  updateStreetDrawLine();
-}
-
-function saveStreetDraw() {
-  if (currentDrawingIndex !== null) {
-    // Save coords to hidden input
-    const coordsInput = document.querySelector(`[name="clCoords_${currentDrawingIndex}"]`);
-    if (coordsInput) {
-      coordsInput.value = JSON.stringify(streetDrawPoints);
-    }
-
-    // Update point count display
-    const countDisplay = document.querySelector(`.cl-coords-count[data-index="${currentDrawingIndex}"]`);
-    if (countDisplay) {
-      countDisplay.textContent = `${streetDrawPoints.length} points`;
-    }
-  }
-
-  closeStreetDrawModal();
-}
-
-function closeStreetDrawModal() {
-  document.getElementById('streetDrawModal').classList.add('hidden');
-  streetDrawPoints = [];
-  streetDrawMarkers = [];
-  if (streetDrawLine) {
-    streetDrawMap.removeLayer(streetDrawLine);
-    streetDrawLine = null;
-  }
-  currentDrawingIndex = null;
 }
 
 // Update showScreen to handle electrical-panels
