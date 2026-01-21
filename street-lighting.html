@@ -314,13 +314,23 @@
         <div>
           <label class="block text-sm font-medium text-slate-300 mb-2">Panel Address</label>
           <div class="relative">
-            <input type="text" id="epAddress" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="Start typing street address..." autocomplete="off" required>
+            <input type="text" id="epAddress" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="Start typing street name..." autocomplete="off" required>
             <div id="addressSuggestions" class="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto hidden"></div>
             <div id="addressLoading" class="absolute right-3 top-3 hidden">
               <svg class="w-5 h-5 text-emerald-400 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
             </div>
           </div>
-          <p class="text-xs text-slate-500 mt-1">Streets within selected city will appear first</p>
+          <p class="text-xs text-slate-500 mt-1">Select street, then add building number below</p>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-2">Building / Block №</label>
+            <input type="text" id="epBuilding" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="e.g., 536, 12A">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-2">District / Area</label>
+            <input type="text" id="epDistrict" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="e.g., Lyulin, Center">
+          </div>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -356,6 +366,32 @@
           <button type="submit" class="flex-1 px-4 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-medium">Save Panel</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Street Drawing Modal -->
+  <div id="streetDrawModal" class="fixed inset-0 z-[9998] flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/80" onclick="closeStreetDrawModal()"></div>
+    <div class="relative bg-slate-800 border border-slate-700 rounded-xl p-4 w-[90vw] max-w-4xl mx-4">
+      <div class="flex justify-between items-center mb-3">
+        <div>
+          <h3 class="text-lg font-semibold">Draw Street Route</h3>
+          <p id="streetDrawInfo" class="text-slate-400 text-sm">Click on map to add points. Double-click to finish.</p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="clearStreetDraw()" class="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-sm rounded-lg">Clear</button>
+          <button onclick="undoStreetPoint()" class="px-3 py-1.5 bg-slate-600 hover:bg-slate-500 text-white text-sm rounded-lg">Undo</button>
+          <button onclick="saveStreetDraw()" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg">Save Route</button>
+          <button onclick="closeStreetDrawModal()" class="p-1.5 hover:bg-slate-700 rounded-lg">
+            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="streetDrawMap" class="h-[60vh] rounded-lg border border-slate-700"></div>
+      <div class="mt-3 flex items-center justify-between text-sm">
+        <span class="text-slate-400">Points: <span id="streetPointCount" class="text-emerald-400 font-mono">0</span></span>
+        <span class="text-slate-500">Tip: Follow the actual street path for accurate visualization</span>
+      </div>
     </div>
   </div>
 
@@ -398,7 +434,9 @@ const cabinets = [
   { id: 'CAB-001', name: 'Vitosha Blvd Hub', status: 'ok', power: 12.4, lastSeen: '2 min ago', area: 'Downtown', circuits: 24,
     coords: [42.6936, 23.3203],
     city: 'Sofia, Bulgaria',
-    address: 'Vitosha Blvd 1',
+    address: 'Vitosha Blvd',
+    building: '1',
+    district: 'Center',
     clRanges: [
       { street: 'Vitosha Blvd', from: 1, to: 33, state: 'ok', coords: [[42.6966, 23.3199], [42.6956, 23.3200], [42.6946, 23.3201], [42.6936, 23.3203], [42.6926, 23.3204], [42.6916, 23.3206], [42.6906, 23.3207]] }
     ]
@@ -406,7 +444,9 @@ const cabinets = [
   { id: 'CAB-002', name: 'NDK Park Node', status: 'warning', power: 8.7, lastSeen: '5 min ago', area: 'Central Park', circuits: 18,
     coords: [42.6863, 23.3186],
     city: 'Sofia, Bulgaria',
-    address: 'NDK Square 2',
+    address: 'NDK Square',
+    building: '2',
+    district: 'Lozenets',
     clRanges: [
       { street: 'Bulgaria Blvd', from: 1, to: 25, state: 'warning', coords: [[42.6883, 23.3156], [42.6873, 23.3171], [42.6863, 23.3186], [42.6853, 23.3201], [42.6843, 23.3216]] }
     ]
@@ -414,7 +454,9 @@ const cabinets = [
   { id: 'CAB-003', name: 'Industrial Zone Alpha', status: 'critical', power: 0, lastSeen: '45 min ago', area: 'Industrial', circuits: 32,
     coords: [42.7150, 23.2850],
     city: 'Sofia, Bulgaria',
-    address: 'Industrial Blvd 45',
+    address: 'Industrial Blvd',
+    building: '45',
+    district: 'Industrial Zone',
     clRanges: [
       { street: 'Industrial Blvd', from: 20, to: 60, state: 'critical', coords: [[42.7180, 23.2820], [42.7165, 23.2835], [42.7150, 23.2850], [42.7135, 23.2865], [42.7120, 23.2880]] }
     ]
@@ -422,7 +464,9 @@ const cabinets = [
   { id: 'CAB-004', name: 'Tsarigradsko Junction', status: 'ok', power: 15.2, lastSeen: '1 min ago', area: 'East Side', circuits: 28,
     coords: [42.6725, 23.3550],
     city: 'Sofia, Bulgaria',
-    address: 'Tsarigradsko Shose 100',
+    address: 'Tsarigradsko Shose',
+    building: '100',
+    district: 'Mladost',
     clRanges: [
       { street: 'Tsarigradsko Shose', from: 80, to: 120, state: 'ok', coords: [[42.6745, 23.3480], [42.6735, 23.3515], [42.6725, 23.3550]] },
       { street: 'Samokov Road', from: 1, to: 15, state: 'ok', coords: [[42.6725, 23.3550], [42.6715, 23.3585], [42.6705, 23.3620]] }
@@ -431,7 +475,9 @@ const cabinets = [
   { id: 'CAB-005', name: 'Serdika Terminal', status: 'offline', power: 0, lastSeen: '2 hours ago', area: 'Center', circuits: 20,
     coords: [42.6975, 23.3225],
     city: 'Sofia, Bulgaria',
-    address: 'Maria Louisa Blvd 18',
+    address: 'Maria Louisa Blvd',
+    building: '18',
+    district: 'Serdika',
     clRanges: [
       { street: 'Maria Louisa Blvd', from: 1, to: 30, state: 'offline', coords: [[42.7005, 23.3210], [42.6990, 23.3218], [42.6975, 23.3225], [42.6960, 23.3233], [42.6945, 23.3240]] }
     ]
@@ -439,7 +485,9 @@ const cabinets = [
   { id: 'CAB-006', name: 'Sofia University', status: 'ok', power: 9.8, lastSeen: '30 sec ago', area: 'Campus', circuits: 16,
     coords: [42.6932, 23.3345],
     city: 'Sofia, Bulgaria',
-    address: 'Tsar Osvoboditel Blvd 15',
+    address: 'Tsar Osvoboditel Blvd',
+    building: '15',
+    district: 'Oborishte',
     clRanges: [
       { street: 'Tsar Osvoboditel Blvd', from: 1, to: 20, state: 'ok', coords: [[42.6962, 23.3330], [42.6947, 23.3338], [42.6932, 23.3345]] },
       { street: 'Vasil Levski Blvd', from: 1, to: 10, state: 'warning', coords: [[42.6932, 23.3345], [42.6917, 23.3353], [42.6902, 23.3360]] }
@@ -937,8 +985,8 @@ function renderEPList() {
         <span class="text-white font-medium text-sm">${ep.name}</span>
         <span class="w-2.5 h-2.5 rounded-full ${STATUS_COLORS[ep.status].bg}"></span>
       </div>
-      <div class="text-xs text-slate-400">${ep.id} • ${ep.city || 'No city'}</div>
-      <div class="text-xs text-slate-500 mt-1">${ep.address || 'No address'}</div>
+      <div class="text-xs text-slate-400">${ep.id} • ${ep.district || ep.city || 'No city'}</div>
+      <div class="text-xs text-slate-500 mt-1">${ep.address || ''}${ep.building ? ' ' + ep.building : ''}</div>
       <div class="flex items-center justify-between mt-2 text-xs">
         <span class="text-slate-500">${ep.clRanges?.length || 0} street(s)</span>
         <span class="text-emerald-400 font-mono">${ep.power} kW</span>
@@ -996,9 +1044,13 @@ function showEPDetail(ep) {
         <div class="text-sm">${ep.city || 'Not set'}</div>
       </div>
       <div class="bg-slate-900/50 rounded-lg p-3">
-        <div class="text-slate-500 text-xs mb-1">Panel Address</div>
-        <div class="text-sm">${ep.address || 'Not set'}</div>
+        <div class="text-slate-500 text-xs mb-1">District</div>
+        <div class="text-sm">${ep.district || 'Not set'}</div>
       </div>
+    </div>
+    <div class="bg-slate-900/50 rounded-lg p-3 mb-4">
+      <div class="text-slate-500 text-xs mb-1">Full Address</div>
+      <div class="text-sm">${ep.address || ''}${ep.building ? ' ' + ep.building : ''}${ep.district ? ', ' + ep.district : ''}${ep.city ? ', ' + ep.city : ''}</div>
     </div>
     <div class="bg-slate-900/50 rounded-lg p-3 mb-4">
       <div class="text-slate-500 text-xs mb-1">Coordinates</div>
@@ -1088,6 +1140,8 @@ function openEPModal(editId = null) {
       document.getElementById('epName').value = ep.name;
       document.getElementById('epCity').value = ep.city || 'Sofia, Bulgaria';
       document.getElementById('epAddress').value = ep.address || '';
+      document.getElementById('epBuilding').value = ep.building || '';
+      document.getElementById('epDistrict').value = ep.district || '';
       document.getElementById('epLat').value = ep.coords[0];
       document.getElementById('epLng').value = ep.coords[1];
       document.getElementById('epStatus').value = ep.status;
@@ -1114,6 +1168,7 @@ function addCLRange(data = null) {
   const container = document.getElementById('clRangesContainer');
   const index = clRangeCount++;
 
+  const coordsCount = data?.coords?.length || 0;
   const rangeHtml = `
     <div class="cl-range bg-slate-900/30 rounded-lg p-3" data-index="${index}">
       <div class="flex justify-between items-center mb-2">
@@ -1131,6 +1186,14 @@ function addCLRange(data = null) {
           <option value="offline" ${data?.state === 'offline' ? 'selected' : ''}>Offline</option>
         </select>
       </div>
+      <div class="flex items-center justify-between">
+        <button type="button" onclick="openStreetDrawModal(${index})" class="text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+          Draw Route on Map
+        </button>
+        <span class="text-xs text-slate-500 cl-coords-count" data-index="${index}">${coordsCount} points</span>
+      </div>
+      <input type="hidden" name="clCoords_${index}" value='${JSON.stringify(data?.coords || [])}'>
     </div>
   `;
   container.insertAdjacentHTML('beforeend', rangeHtml);
@@ -1168,6 +1231,8 @@ document.getElementById('epForm')?.addEventListener('submit', (e) => {
   const name = document.getElementById('epName').value;
   const city = document.getElementById('epCity').value;
   const address = document.getElementById('epAddress').value;
+  const building = document.getElementById('epBuilding').value;
+  const district = document.getElementById('epDistrict').value;
   const lat = parseFloat(document.getElementById('epLat').value);
   const lng = parseFloat(document.getElementById('epLng').value);
   const status = document.getElementById('epStatus').value;
@@ -1181,8 +1246,19 @@ document.getElementById('epForm')?.addEventListener('submit', (e) => {
     const to = parseInt(document.querySelector(`[name="clTo_${idx}"]`)?.value);
     const state = document.querySelector(`[name="clState_${idx}"]`)?.value;
 
+    // Get drawn coords from hidden input
+    let coords = [];
+    const coordsInput = document.querySelector(`[name="clCoords_${idx}"]`);
+    if (coordsInput) {
+      try {
+        coords = JSON.parse(coordsInput.value) || [];
+      } catch (e) {
+        coords = [];
+      }
+    }
+
     if (street && !isNaN(from) && !isNaN(to)) {
-      clRanges.push({ street, from, to, state, coords: [] }); // coords would be set via map interaction
+      clRanges.push({ street, from, to, state, coords });
     }
   });
 
@@ -1193,13 +1269,10 @@ document.getElementById('epForm')?.addEventListener('submit', (e) => {
       ep.name = name;
       ep.city = city;
       ep.address = address;
+      ep.building = building;
+      ep.district = district;
       ep.coords = [lat, lng];
       ep.status = status;
-      // Preserve existing coords in clRanges if street matches
-      clRanges.forEach(newCl => {
-        const existingCl = ep.clRanges?.find(c => c.street === newCl.street);
-        if (existingCl) newCl.coords = existingCl.coords;
-      });
       ep.clRanges = clRanges;
     }
   } else {
@@ -1210,11 +1283,13 @@ document.getElementById('epForm')?.addEventListener('submit', (e) => {
       name,
       city,
       address,
+      building,
+      district,
       coords: [lat, lng],
       status,
       power: 0,
       lastSeen: 'Just now',
-      area: city.split(',')[0] || 'New',
+      area: district || city.split(',')[0] || 'New',
       circuits: 0,
       clRanges
     });
@@ -1235,6 +1310,170 @@ document.getElementById('searchEP')?.addEventListener('input', (e) => {
     el.style.display = match ? '' : 'none';
   });
 });
+
+// ============ STREET DRAWING ============
+let streetDrawMap = null;
+let streetDrawLine = null;
+let streetDrawPoints = [];
+let streetDrawMarkers = [];
+let currentDrawingIndex = null;
+
+function openStreetDrawModal(rangeIndex) {
+  currentDrawingIndex = rangeIndex;
+  const modal = document.getElementById('streetDrawModal');
+  modal.classList.remove('hidden');
+
+  // Get existing coords if any
+  const coordsInput = document.querySelector(`[name="clCoords_${rangeIndex}"]`);
+  if (coordsInput) {
+    try {
+      streetDrawPoints = JSON.parse(coordsInput.value) || [];
+    } catch (e) {
+      streetDrawPoints = [];
+    }
+  }
+
+  // Get street name for info
+  const streetName = document.querySelector(`[name="clStreet_${rangeIndex}"]`)?.value || 'Street';
+  document.getElementById('streetDrawInfo').textContent = `Drawing route for: ${streetName}. Click on map to add points.`;
+
+  // Initialize or update map
+  setTimeout(() => {
+    initStreetDrawMap();
+    updateStreetDrawLine();
+  }, 100);
+}
+
+function initStreetDrawMap() {
+  const container = document.getElementById('streetDrawMap');
+  if (!container) return;
+
+  if (streetDrawMap) {
+    streetDrawMap.invalidateSize();
+    return;
+  }
+
+  // Get center from EP coordinates or use default
+  const epLat = parseFloat(document.getElementById('epLat')?.value) || MAP_CENTER[0];
+  const epLng = parseFloat(document.getElementById('epLng')?.value) || MAP_CENTER[1];
+
+  streetDrawMap = L.map('streetDrawMap').setView([epLat, epLng], 16);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; CARTO'
+  }).addTo(streetDrawMap);
+
+  // Add EP marker
+  L.marker([epLat, epLng], {
+    icon: createMarkerIcon('#10b981', true)
+  }).addTo(streetDrawMap).bindTooltip('EP Location', { permanent: false });
+
+  // Click handler to add points
+  streetDrawMap.on('click', (e) => {
+    addStreetPoint(e.latlng.lat, e.latlng.lng);
+  });
+
+  // Double-click to finish (optional)
+  streetDrawMap.on('dblclick', (e) => {
+    e.originalEvent.preventDefault();
+    saveStreetDraw();
+  });
+}
+
+function addStreetPoint(lat, lng) {
+  streetDrawPoints.push([lat, lng]);
+
+  // Add marker for the point
+  const marker = L.circleMarker([lat, lng], {
+    radius: 6,
+    fillColor: '#10b981',
+    fillOpacity: 1,
+    color: '#fff',
+    weight: 2
+  }).addTo(streetDrawMap);
+
+  marker.bindTooltip(`Point ${streetDrawPoints.length}`, { permanent: false });
+  streetDrawMarkers.push(marker);
+
+  updateStreetDrawLine();
+  document.getElementById('streetPointCount').textContent = streetDrawPoints.length;
+}
+
+function updateStreetDrawLine() {
+  // Remove existing line
+  if (streetDrawLine) {
+    streetDrawMap.removeLayer(streetDrawLine);
+  }
+
+  // Clear existing markers and re-add
+  streetDrawMarkers.forEach(m => streetDrawMap.removeLayer(m));
+  streetDrawMarkers = [];
+
+  // Add markers for all points
+  streetDrawPoints.forEach((point, i) => {
+    const marker = L.circleMarker(point, {
+      radius: 6,
+      fillColor: i === 0 ? '#f59e0b' : i === streetDrawPoints.length - 1 ? '#ef4444' : '#10b981',
+      fillOpacity: 1,
+      color: '#fff',
+      weight: 2
+    }).addTo(streetDrawMap);
+    marker.bindTooltip(`Point ${i + 1}${i === 0 ? ' (Start)' : i === streetDrawPoints.length - 1 ? ' (End)' : ''}`, { permanent: false });
+    streetDrawMarkers.push(marker);
+  });
+
+  // Draw line if we have at least 2 points
+  if (streetDrawPoints.length >= 2) {
+    streetDrawLine = L.polyline(streetDrawPoints, {
+      color: '#10b981',
+      weight: 6,
+      opacity: 0.8,
+      lineCap: 'round'
+    }).addTo(streetDrawMap);
+  }
+
+  document.getElementById('streetPointCount').textContent = streetDrawPoints.length;
+}
+
+function undoStreetPoint() {
+  if (streetDrawPoints.length > 0) {
+    streetDrawPoints.pop();
+    updateStreetDrawLine();
+  }
+}
+
+function clearStreetDraw() {
+  streetDrawPoints = [];
+  updateStreetDrawLine();
+}
+
+function saveStreetDraw() {
+  if (currentDrawingIndex !== null) {
+    // Save coords to hidden input
+    const coordsInput = document.querySelector(`[name="clCoords_${currentDrawingIndex}"]`);
+    if (coordsInput) {
+      coordsInput.value = JSON.stringify(streetDrawPoints);
+    }
+
+    // Update point count display
+    const countDisplay = document.querySelector(`.cl-coords-count[data-index="${currentDrawingIndex}"]`);
+    if (countDisplay) {
+      countDisplay.textContent = `${streetDrawPoints.length} points`;
+    }
+  }
+
+  closeStreetDrawModal();
+}
+
+function closeStreetDrawModal() {
+  document.getElementById('streetDrawModal').classList.add('hidden');
+  streetDrawPoints = [];
+  streetDrawMarkers = [];
+  if (streetDrawLine) {
+    streetDrawMap.removeLayer(streetDrawLine);
+    streetDrawLine = null;
+  }
+  currentDrawingIndex = null;
+}
 
 // Update showScreen to handle electrical-panels
 const originalShowScreen = showScreen;
