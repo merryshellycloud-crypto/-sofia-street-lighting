@@ -375,14 +375,20 @@
             <!-- CL Street Ranges Section -->
             <div class="bg-slate-900/30 rounded-lg p-4">
               <div class="flex justify-between items-center mb-3">
-                <h4 class="text-sm font-medium text-emerald-400">City Lights (CL) Street Ranges</h4>
-                <button type="button" onclick="addCLRange()" class="text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                  Add Street
-                </button>
+                <h4 class="text-sm font-medium text-emerald-400">City Lights (CL) Coverage</h4>
+                <div class="flex gap-2">
+                  <button type="button" onclick="addCLRange('street')" class="text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    Street
+                  </button>
+                  <button type="button" onclick="addCLRange('custom')" class="text-amber-400 hover:text-amber-300 text-xs flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                    Custom Draw
+                  </button>
+                </div>
               </div>
               <div id="clRangesContainer" class="space-y-2 max-h-48 overflow-y-auto"></div>
-              <p class="text-xs text-slate-500 mt-2">Select a street range and draw its route on the map →</p>
+              <p class="text-xs text-slate-500 mt-2">Add street addresses or draw custom routes on the map →</p>
             </div>
           </form>
         </div>
@@ -1341,7 +1347,7 @@ function openEPModal(editId = null) {
     }
   } else {
     title.textContent = 'Add Electrical Panel';
-    addCLRange(); // Add one empty range by default
+    // Don't add default CL range - let user choose Street or Custom
   }
 
   modal.classList.remove('hidden');
@@ -1361,37 +1367,85 @@ function closeEPModal() {
   resetDrawingState();
 }
 
-function addCLRange(data = null) {
+function addCLRange(typeOrData = 'street', existingData = null) {
   const container = document.getElementById('clRangesContainer');
   const index = clRangeCount++;
 
+  // Handle both old format (data object) and new format (type + data)
+  let type = 'street';
+  let data = null;
+  if (typeof typeOrData === 'object' && typeOrData !== null) {
+    // Old format: addCLRange(dataObject)
+    data = typeOrData;
+    type = data.type || 'street';
+  } else {
+    // New format: addCLRange('street') or addCLRange('custom', data)
+    type = typeOrData;
+    data = existingData;
+  }
+
   const coordsCount = data?.coords?.length || 0;
-  const rangeHtml = `
-    <div class="cl-range bg-slate-800/50 rounded-lg p-2 border border-transparent cursor-pointer hover:border-slate-600" data-index="${index}" onclick="selectCLRangeForDrawing(${index})">
-      <div class="flex justify-between items-center mb-2">
-        <span class="text-xs text-slate-400">Street ${index + 1}</span>
-        <div class="flex items-center gap-2">
-          <span class="text-xs text-emerald-400 cl-coords-count" data-index="${index}">${coordsCount} pts</span>
-          <button type="button" onclick="event.stopPropagation(); removeCLRange(${index})" class="text-red-400 hover:text-red-300 text-xs">✕</button>
+  const isCustom = type === 'custom';
+
+  let rangeHtml;
+  if (isCustom) {
+    // Custom drawing - just a label and state
+    rangeHtml = `
+      <div class="cl-range bg-amber-900/20 rounded-lg p-2 border border-amber-500/30 cursor-pointer hover:border-amber-500/50" data-index="${index}" data-type="custom" onclick="selectCLRangeForDrawing(${index})">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-xs text-amber-400">✏️ Custom Route ${index + 1}</span>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-emerald-400 cl-coords-count" data-index="${index}">${coordsCount} pts</span>
+            <button type="button" onclick="event.stopPropagation(); removeCLRange(${index})" class="text-red-400 hover:text-red-300 text-xs">✕</button>
+          </div>
         </div>
-      </div>
-      <div class="grid grid-cols-4 gap-1">
-        <div class="col-span-4 relative">
-          <input type="text" name="clStreet_${index}" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" placeholder="Type street name..." value="${data?.street || ''}" onclick="event.stopPropagation()" oninput="searchCLStreet(${index}, this.value)" autocomplete="off">
-          <div id="clStreetSuggestions_${index}" class="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-32 overflow-y-auto hidden"></div>
+        <div class="grid grid-cols-4 gap-1">
+          <input type="text" name="clStreet_${index}" class="col-span-2 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" placeholder="Route label..." value="${data?.street || ''}" onclick="event.stopPropagation()">
+          <select name="clState_${index}" class="col-span-2 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" onclick="event.stopPropagation()">
+            <option value="ok" ${data?.state === 'ok' ? 'selected' : ''}>OK</option>
+            <option value="warning" ${data?.state === 'warning' ? 'selected' : ''}>Warning</option>
+            <option value="critical" ${data?.state === 'critical' ? 'selected' : ''}>Critical</option>
+            <option value="offline" ${data?.state === 'offline' ? 'selected' : ''}>Offline</option>
+          </select>
         </div>
-        <input type="number" name="clFrom_${index}" class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" placeholder="From" value="${data?.from || ''}" onclick="event.stopPropagation()">
-        <input type="number" name="clTo_${index}" class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" placeholder="To" value="${data?.to || ''}" onclick="event.stopPropagation()">
-        <select name="clState_${index}" class="col-span-2 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" onclick="event.stopPropagation()">
-          <option value="ok" ${data?.state === 'ok' ? 'selected' : ''}>OK</option>
-          <option value="warning" ${data?.state === 'warning' ? 'selected' : ''}>Warning</option>
-          <option value="critical" ${data?.state === 'critical' ? 'selected' : ''}>Critical</option>
-          <option value="offline" ${data?.state === 'offline' ? 'selected' : ''}>Offline</option>
-        </select>
+        <p class="text-[10px] text-amber-400/70 mt-1">Click on map to draw route manually</p>
+        <input type="hidden" name="clType_${index}" value="custom">
+        <input type="hidden" name="clFrom_${index}" value="${data?.from || ''}">
+        <input type="hidden" name="clTo_${index}" value="${data?.to || ''}">
+        <input type="hidden" name="clCoords_${index}" value='${JSON.stringify(data?.coords || [])}'>
       </div>
-      <input type="hidden" name="clCoords_${index}" value='${JSON.stringify(data?.coords || [])}'>
-    </div>
-  `;
+    `;
+  } else {
+    // Street address with autocomplete
+    rangeHtml = `
+      <div class="cl-range bg-slate-800/50 rounded-lg p-2 border border-transparent cursor-pointer hover:border-slate-600" data-index="${index}" data-type="street" onclick="selectCLRangeForDrawing(${index})">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-xs text-slate-400">🛣️ Street ${index + 1}</span>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-emerald-400 cl-coords-count" data-index="${index}">${coordsCount} pts</span>
+            <button type="button" onclick="event.stopPropagation(); removeCLRange(${index})" class="text-red-400 hover:text-red-300 text-xs">✕</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-4 gap-1">
+          <div class="col-span-4 relative">
+            <input type="text" name="clStreet_${index}" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" placeholder="Type street name..." value="${data?.street || ''}" onclick="event.stopPropagation()" oninput="searchCLStreet(${index}, this.value)" autocomplete="off">
+            <div id="clStreetSuggestions_${index}" class="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-32 overflow-y-auto hidden"></div>
+          </div>
+          <input type="number" name="clFrom_${index}" class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" placeholder="From №" value="${data?.from || ''}" onclick="event.stopPropagation()">
+          <input type="number" name="clTo_${index}" class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" placeholder="To №" value="${data?.to || ''}" onclick="event.stopPropagation()">
+          <select name="clState_${index}" class="col-span-2 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" onclick="event.stopPropagation()">
+            <option value="ok" ${data?.state === 'ok' ? 'selected' : ''}>OK</option>
+            <option value="warning" ${data?.state === 'warning' ? 'selected' : ''}>Warning</option>
+            <option value="critical" ${data?.state === 'critical' ? 'selected' : ''}>Critical</option>
+            <option value="offline" ${data?.state === 'offline' ? 'selected' : ''}>Offline</option>
+          </select>
+        </div>
+        <input type="hidden" name="clType_${index}" value="street">
+        <input type="hidden" name="clCoords_${index}" value='${JSON.stringify(data?.coords || [])}'>
+      </div>
+    `;
+  }
+
   container.insertAdjacentHTML('beforeend', rangeHtml);
 
   // Auto-select for drawing if map is ready
@@ -1823,13 +1877,14 @@ function saveEPForm() {
   const lng = parseFloat(document.getElementById('epLng').value);
   const status = document.getElementById('epStatus').value;
 
-  // Collect CL ranges
+  // Collect CL ranges (both street and custom types)
   const clRanges = [];
   document.querySelectorAll('.cl-range').forEach(rangeEl => {
     const idx = rangeEl.dataset.index;
+    const type = document.querySelector(`[name="clType_${idx}"]`)?.value || 'street';
     const street = document.querySelector(`[name="clStreet_${idx}"]`)?.value;
-    const from = parseInt(document.querySelector(`[name="clFrom_${idx}"]`)?.value);
-    const to = parseInt(document.querySelector(`[name="clTo_${idx}"]`)?.value);
+    const from = parseInt(document.querySelector(`[name="clFrom_${idx}"]`)?.value) || 0;
+    const to = parseInt(document.querySelector(`[name="clTo_${idx}"]`)?.value) || 0;
     const state = document.querySelector(`[name="clState_${idx}"]`)?.value;
 
     let coords = [];
@@ -1842,8 +1897,16 @@ function saveEPForm() {
       }
     }
 
-    if (street && !isNaN(from) && !isNaN(to)) {
-      clRanges.push({ street, from, to, state, coords });
+    // For street type: require street name and from/to numbers
+    // For custom type: require either label or drawn coords
+    if (type === 'custom') {
+      if (street || coords.length > 0) {
+        clRanges.push({ type, street: street || 'Custom Route', from, to, state, coords });
+      }
+    } else {
+      if (street) {
+        clRanges.push({ type, street, from, to, state, coords });
+      }
     }
   });
 
