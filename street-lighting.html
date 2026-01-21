@@ -314,13 +314,23 @@
         <div>
           <label class="block text-sm font-medium text-slate-300 mb-2">Panel Address</label>
           <div class="relative">
-            <input type="text" id="epAddress" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="Start typing street address..." autocomplete="off" required>
+            <input type="text" id="epAddress" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="Start typing street name..." autocomplete="off" required>
             <div id="addressSuggestions" class="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto hidden"></div>
             <div id="addressLoading" class="absolute right-3 top-3 hidden">
               <svg class="w-5 h-5 text-emerald-400 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
             </div>
           </div>
-          <p class="text-xs text-slate-500 mt-1">Streets within selected city will appear first</p>
+          <p class="text-xs text-slate-500 mt-1">Select street, then add building number below</p>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-2">Building / Block №</label>
+            <input type="text" id="epBuilding" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="e.g., 536, 12A">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-2">District / Area</label>
+            <input type="text" id="epDistrict" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" placeholder="e.g., Lyulin, Center">
+          </div>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -398,7 +408,9 @@ const cabinets = [
   { id: 'CAB-001', name: 'Vitosha Blvd Hub', status: 'ok', power: 12.4, lastSeen: '2 min ago', area: 'Downtown', circuits: 24,
     coords: [42.6936, 23.3203],
     city: 'Sofia, Bulgaria',
-    address: 'Vitosha Blvd 1',
+    address: 'Vitosha Blvd',
+    building: '1',
+    district: 'Center',
     clRanges: [
       { street: 'Vitosha Blvd', from: 1, to: 33, state: 'ok', coords: [[42.6966, 23.3199], [42.6956, 23.3200], [42.6946, 23.3201], [42.6936, 23.3203], [42.6926, 23.3204], [42.6916, 23.3206], [42.6906, 23.3207]] }
     ]
@@ -406,7 +418,9 @@ const cabinets = [
   { id: 'CAB-002', name: 'NDK Park Node', status: 'warning', power: 8.7, lastSeen: '5 min ago', area: 'Central Park', circuits: 18,
     coords: [42.6863, 23.3186],
     city: 'Sofia, Bulgaria',
-    address: 'NDK Square 2',
+    address: 'NDK Square',
+    building: '2',
+    district: 'Lozenets',
     clRanges: [
       { street: 'Bulgaria Blvd', from: 1, to: 25, state: 'warning', coords: [[42.6883, 23.3156], [42.6873, 23.3171], [42.6863, 23.3186], [42.6853, 23.3201], [42.6843, 23.3216]] }
     ]
@@ -414,7 +428,9 @@ const cabinets = [
   { id: 'CAB-003', name: 'Industrial Zone Alpha', status: 'critical', power: 0, lastSeen: '45 min ago', area: 'Industrial', circuits: 32,
     coords: [42.7150, 23.2850],
     city: 'Sofia, Bulgaria',
-    address: 'Industrial Blvd 45',
+    address: 'Industrial Blvd',
+    building: '45',
+    district: 'Industrial Zone',
     clRanges: [
       { street: 'Industrial Blvd', from: 20, to: 60, state: 'critical', coords: [[42.7180, 23.2820], [42.7165, 23.2835], [42.7150, 23.2850], [42.7135, 23.2865], [42.7120, 23.2880]] }
     ]
@@ -422,7 +438,9 @@ const cabinets = [
   { id: 'CAB-004', name: 'Tsarigradsko Junction', status: 'ok', power: 15.2, lastSeen: '1 min ago', area: 'East Side', circuits: 28,
     coords: [42.6725, 23.3550],
     city: 'Sofia, Bulgaria',
-    address: 'Tsarigradsko Shose 100',
+    address: 'Tsarigradsko Shose',
+    building: '100',
+    district: 'Mladost',
     clRanges: [
       { street: 'Tsarigradsko Shose', from: 80, to: 120, state: 'ok', coords: [[42.6745, 23.3480], [42.6735, 23.3515], [42.6725, 23.3550]] },
       { street: 'Samokov Road', from: 1, to: 15, state: 'ok', coords: [[42.6725, 23.3550], [42.6715, 23.3585], [42.6705, 23.3620]] }
@@ -431,7 +449,9 @@ const cabinets = [
   { id: 'CAB-005', name: 'Serdika Terminal', status: 'offline', power: 0, lastSeen: '2 hours ago', area: 'Center', circuits: 20,
     coords: [42.6975, 23.3225],
     city: 'Sofia, Bulgaria',
-    address: 'Maria Louisa Blvd 18',
+    address: 'Maria Louisa Blvd',
+    building: '18',
+    district: 'Serdika',
     clRanges: [
       { street: 'Maria Louisa Blvd', from: 1, to: 30, state: 'offline', coords: [[42.7005, 23.3210], [42.6990, 23.3218], [42.6975, 23.3225], [42.6960, 23.3233], [42.6945, 23.3240]] }
     ]
@@ -439,7 +459,9 @@ const cabinets = [
   { id: 'CAB-006', name: 'Sofia University', status: 'ok', power: 9.8, lastSeen: '30 sec ago', area: 'Campus', circuits: 16,
     coords: [42.6932, 23.3345],
     city: 'Sofia, Bulgaria',
-    address: 'Tsar Osvoboditel Blvd 15',
+    address: 'Tsar Osvoboditel Blvd',
+    building: '15',
+    district: 'Oborishte',
     clRanges: [
       { street: 'Tsar Osvoboditel Blvd', from: 1, to: 20, state: 'ok', coords: [[42.6962, 23.3330], [42.6947, 23.3338], [42.6932, 23.3345]] },
       { street: 'Vasil Levski Blvd', from: 1, to: 10, state: 'warning', coords: [[42.6932, 23.3345], [42.6917, 23.3353], [42.6902, 23.3360]] }
@@ -937,8 +959,8 @@ function renderEPList() {
         <span class="text-white font-medium text-sm">${ep.name}</span>
         <span class="w-2.5 h-2.5 rounded-full ${STATUS_COLORS[ep.status].bg}"></span>
       </div>
-      <div class="text-xs text-slate-400">${ep.id} • ${ep.city || 'No city'}</div>
-      <div class="text-xs text-slate-500 mt-1">${ep.address || 'No address'}</div>
+      <div class="text-xs text-slate-400">${ep.id} • ${ep.district || ep.city || 'No city'}</div>
+      <div class="text-xs text-slate-500 mt-1">${ep.address || ''}${ep.building ? ' ' + ep.building : ''}</div>
       <div class="flex items-center justify-between mt-2 text-xs">
         <span class="text-slate-500">${ep.clRanges?.length || 0} street(s)</span>
         <span class="text-emerald-400 font-mono">${ep.power} kW</span>
@@ -996,9 +1018,13 @@ function showEPDetail(ep) {
         <div class="text-sm">${ep.city || 'Not set'}</div>
       </div>
       <div class="bg-slate-900/50 rounded-lg p-3">
-        <div class="text-slate-500 text-xs mb-1">Panel Address</div>
-        <div class="text-sm">${ep.address || 'Not set'}</div>
+        <div class="text-slate-500 text-xs mb-1">District</div>
+        <div class="text-sm">${ep.district || 'Not set'}</div>
       </div>
+    </div>
+    <div class="bg-slate-900/50 rounded-lg p-3 mb-4">
+      <div class="text-slate-500 text-xs mb-1">Full Address</div>
+      <div class="text-sm">${ep.address || ''}${ep.building ? ' ' + ep.building : ''}${ep.district ? ', ' + ep.district : ''}${ep.city ? ', ' + ep.city : ''}</div>
     </div>
     <div class="bg-slate-900/50 rounded-lg p-3 mb-4">
       <div class="text-slate-500 text-xs mb-1">Coordinates</div>
@@ -1088,6 +1114,8 @@ function openEPModal(editId = null) {
       document.getElementById('epName').value = ep.name;
       document.getElementById('epCity').value = ep.city || 'Sofia, Bulgaria';
       document.getElementById('epAddress').value = ep.address || '';
+      document.getElementById('epBuilding').value = ep.building || '';
+      document.getElementById('epDistrict').value = ep.district || '';
       document.getElementById('epLat').value = ep.coords[0];
       document.getElementById('epLng').value = ep.coords[1];
       document.getElementById('epStatus').value = ep.status;
@@ -1168,6 +1196,8 @@ document.getElementById('epForm')?.addEventListener('submit', (e) => {
   const name = document.getElementById('epName').value;
   const city = document.getElementById('epCity').value;
   const address = document.getElementById('epAddress').value;
+  const building = document.getElementById('epBuilding').value;
+  const district = document.getElementById('epDistrict').value;
   const lat = parseFloat(document.getElementById('epLat').value);
   const lng = parseFloat(document.getElementById('epLng').value);
   const status = document.getElementById('epStatus').value;
@@ -1193,6 +1223,8 @@ document.getElementById('epForm')?.addEventListener('submit', (e) => {
       ep.name = name;
       ep.city = city;
       ep.address = address;
+      ep.building = building;
+      ep.district = district;
       ep.coords = [lat, lng];
       ep.status = status;
       // Preserve existing coords in clRanges if street matches
@@ -1210,11 +1242,13 @@ document.getElementById('epForm')?.addEventListener('submit', (e) => {
       name,
       city,
       address,
+      building,
+      district,
       coords: [lat, lng],
       status,
       power: 0,
       lastSeen: 'Just now',
-      area: city.split(',')[0] || 'New',
+      area: district || city.split(',')[0] || 'New',
       circuits: 0,
       clRanges
     });
