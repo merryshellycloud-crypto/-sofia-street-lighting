@@ -375,14 +375,20 @@
             <!-- CL Street Ranges Section -->
             <div class="bg-slate-900/30 rounded-lg p-4">
               <div class="flex justify-between items-center mb-3">
-                <h4 class="text-sm font-medium text-emerald-400">City Lights (CL) Street Ranges</h4>
-                <button type="button" onclick="addCLRange()" class="text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                  Add Street
-                </button>
+                <h4 class="text-sm font-medium text-emerald-400">City Lights (CL) Coverage</h4>
+                <div class="flex gap-2">
+                  <button type="button" onclick="addCLRange('street')" class="text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    Street
+                  </button>
+                  <button type="button" onclick="addCLRange('custom')" class="text-amber-400 hover:text-amber-300 text-xs flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                    Custom Draw
+                  </button>
+                </div>
               </div>
               <div id="clRangesContainer" class="space-y-2 max-h-48 overflow-y-auto"></div>
-              <p class="text-xs text-slate-500 mt-2">Select a street range and draw its route on the map →</p>
+              <p class="text-xs text-slate-500 mt-2">Add street addresses or draw custom routes on the map →</p>
             </div>
           </form>
         </div>
@@ -1076,7 +1082,7 @@ function selectAddress(lat, lon, displayName) {
 
 // Recalculate coordinates from full address
 async function recalculateCoordinates() {
-  const city = document.getElementById('epCity').value.trim();
+  const city = document.getElementById('epCity').value.trim() || 'София';
   const address = document.getElementById('epAddress').value.trim();
   const building = document.getElementById('epBuilding').value.trim();
   const district = document.getElementById('epDistrict').value.trim();
@@ -1086,13 +1092,6 @@ async function recalculateCoordinates() {
     return;
   }
 
-  // Build full address string
-  let fullAddress = '';
-  if (building) fullAddress += building + ' ';
-  if (address) fullAddress += address;
-  if (district) fullAddress += ', ' + district;
-  if (city) fullAddress += ', ' + city;
-
   // Show loading state
   const latInput = document.getElementById('epLat');
   const lngInput = document.getElementById('epLng');
@@ -1101,37 +1100,70 @@ async function recalculateCoordinates() {
   latInput.placeholder = 'Searching...';
   lngInput.placeholder = 'Searching...';
 
-  try {
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}&limit=1&addressdetails=1`,
-      { headers: { 'Accept-Language': 'en' } }
-    );
-    const results = await response.json();
+  // Build multiple search queries optimized for Sofia, Bulgaria
+  const searchQueries = [];
 
-    if (results.length > 0) {
-      const lat = parseFloat(results[0].lat);
-      const lon = parseFloat(results[0].lon);
-
-      latInput.value = lat;
-      lngInput.value = lon;
-      latInput.placeholder = '--';
-      lngInput.placeholder = '--';
-
-      // Update map
-      if (epDrawMap) {
-        epDrawMap.setView([lat, lon], 16);
-        updateEPMarker();
-      }
-    } else {
-      latInput.placeholder = 'Not found';
-      lngInput.placeholder = 'Not found';
-      alert('Could not find coordinates for this address. Try selecting from the address suggestions.');
-    }
-  } catch (error) {
-    latInput.placeholder = 'Error';
-    lngInput.placeholder = 'Error';
-    alert('Error looking up coordinates. Please try again.');
+  // For residential complexes (жк) with block numbers - most common in Sofia
+  if (district && building) {
+    // Try Bulgarian format first
+    searchQueries.push(`жк ${district} блок ${building}, София, България`);
+    searchQueries.push(`${district} блок ${building}, София`);
+    searchQueries.push(`блок ${building}, ${district}, София`);
   }
+
+  // Street address with building number
+  if (address && building) {
+    searchQueries.push(`${address} ${building}, София, България`);
+    searchQueries.push(`ул. ${address} ${building}, София`);
+  }
+
+  // Street address only
+  if (address) {
+    searchQueries.push(`${address}, ${district ? district + ', ' : ''}София, България`);
+  }
+
+  // District/neighborhood only
+  if (district) {
+    searchQueries.push(`жк ${district}, София, България`);
+    searchQueries.push(`${district}, София, България`);
+  }
+
+  // Try each query until we get a result
+  for (const query of searchQueries) {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&addressdetails=1&countrycodes=bg`,
+        { headers: { 'Accept-Language': 'bg,en' } }
+      );
+      const results = await response.json();
+
+      if (results.length > 0) {
+        const lat = parseFloat(results[0].lat);
+        const lon = parseFloat(results[0].lon);
+
+        latInput.value = lat;
+        lngInput.value = lon;
+        latInput.placeholder = '--';
+        lngInput.placeholder = '--';
+
+        // Update map
+        if (epDrawMap) {
+          epDrawMap.setView([lat, lon], 16);
+          updateEPMarker();
+        }
+
+        console.log('Found coordinates using query:', query);
+        return; // Success - exit function
+      }
+    } catch (e) {
+      console.warn('Search failed for:', query, e);
+    }
+  }
+
+  // If we get here, no results found
+  latInput.placeholder = 'Not found';
+  lngInput.placeholder = 'Not found';
+  alert('Could not find coordinates. Try:\n- Using Bulgarian spelling (Люлин, Младост)\n- Checking the district name\n- Or manually position on the map');
 }
 
 // Initialize autocomplete when modal opens
@@ -1315,7 +1347,7 @@ function openEPModal(editId = null) {
     }
   } else {
     title.textContent = 'Add Electrical Panel';
-    addCLRange(); // Add one empty range by default
+    // Don't add default CL range - let user choose Street or Custom
   }
 
   modal.classList.remove('hidden');
@@ -1335,37 +1367,85 @@ function closeEPModal() {
   resetDrawingState();
 }
 
-function addCLRange(data = null) {
+function addCLRange(typeOrData = 'street', existingData = null) {
   const container = document.getElementById('clRangesContainer');
   const index = clRangeCount++;
 
+  // Handle both old format (data object) and new format (type + data)
+  let type = 'street';
+  let data = null;
+  if (typeof typeOrData === 'object' && typeOrData !== null) {
+    // Old format: addCLRange(dataObject)
+    data = typeOrData;
+    type = data.type || 'street';
+  } else {
+    // New format: addCLRange('street') or addCLRange('custom', data)
+    type = typeOrData;
+    data = existingData;
+  }
+
   const coordsCount = data?.coords?.length || 0;
-  const rangeHtml = `
-    <div class="cl-range bg-slate-800/50 rounded-lg p-2 border border-transparent cursor-pointer hover:border-slate-600" data-index="${index}" onclick="selectCLRangeForDrawing(${index})">
-      <div class="flex justify-between items-center mb-2">
-        <span class="text-xs text-slate-400">Street ${index + 1}</span>
-        <div class="flex items-center gap-2">
-          <span class="text-xs text-emerald-400 cl-coords-count" data-index="${index}">${coordsCount} pts</span>
-          <button type="button" onclick="event.stopPropagation(); removeCLRange(${index})" class="text-red-400 hover:text-red-300 text-xs">✕</button>
+  const isCustom = type === 'custom';
+
+  let rangeHtml;
+  if (isCustom) {
+    // Custom drawing - just a label and state
+    rangeHtml = `
+      <div class="cl-range bg-amber-900/20 rounded-lg p-2 border border-amber-500/30 cursor-pointer hover:border-amber-500/50" data-index="${index}" data-type="custom" onclick="selectCLRangeForDrawing(${index})">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-xs text-amber-400">✏️ Custom Route ${index + 1}</span>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-emerald-400 cl-coords-count" data-index="${index}">${coordsCount} pts</span>
+            <button type="button" onclick="event.stopPropagation(); removeCLRange(${index})" class="text-red-400 hover:text-red-300 text-xs">✕</button>
+          </div>
         </div>
-      </div>
-      <div class="grid grid-cols-4 gap-1">
-        <div class="col-span-4 relative">
-          <input type="text" name="clStreet_${index}" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" placeholder="Type street name..." value="${data?.street || ''}" onclick="event.stopPropagation()" oninput="searchCLStreet(${index}, this.value)" autocomplete="off">
-          <div id="clStreetSuggestions_${index}" class="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-32 overflow-y-auto hidden"></div>
+        <div class="grid grid-cols-4 gap-1">
+          <input type="text" name="clStreet_${index}" class="col-span-2 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" placeholder="Route label..." value="${data?.street || ''}" onclick="event.stopPropagation()">
+          <select name="clState_${index}" class="col-span-2 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" onclick="event.stopPropagation()">
+            <option value="ok" ${data?.state === 'ok' ? 'selected' : ''}>OK</option>
+            <option value="warning" ${data?.state === 'warning' ? 'selected' : ''}>Warning</option>
+            <option value="critical" ${data?.state === 'critical' ? 'selected' : ''}>Critical</option>
+            <option value="offline" ${data?.state === 'offline' ? 'selected' : ''}>Offline</option>
+          </select>
         </div>
-        <input type="number" name="clFrom_${index}" class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" placeholder="From" value="${data?.from || ''}" onclick="event.stopPropagation()">
-        <input type="number" name="clTo_${index}" class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" placeholder="To" value="${data?.to || ''}" onclick="event.stopPropagation()">
-        <select name="clState_${index}" class="col-span-2 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" onclick="event.stopPropagation()">
-          <option value="ok" ${data?.state === 'ok' ? 'selected' : ''}>OK</option>
-          <option value="warning" ${data?.state === 'warning' ? 'selected' : ''}>Warning</option>
-          <option value="critical" ${data?.state === 'critical' ? 'selected' : ''}>Critical</option>
-          <option value="offline" ${data?.state === 'offline' ? 'selected' : ''}>Offline</option>
-        </select>
+        <p class="text-[10px] text-amber-400/70 mt-1">Click on map to draw route manually</p>
+        <input type="hidden" name="clType_${index}" value="custom">
+        <input type="hidden" name="clFrom_${index}" value="${data?.from || ''}">
+        <input type="hidden" name="clTo_${index}" value="${data?.to || ''}">
+        <input type="hidden" name="clCoords_${index}" value='${JSON.stringify(data?.coords || [])}'>
       </div>
-      <input type="hidden" name="clCoords_${index}" value='${JSON.stringify(data?.coords || [])}'>
-    </div>
-  `;
+    `;
+  } else {
+    // Street address with autocomplete
+    rangeHtml = `
+      <div class="cl-range bg-slate-800/50 rounded-lg p-2 border border-transparent cursor-pointer hover:border-slate-600" data-index="${index}" data-type="street" onclick="selectCLRangeForDrawing(${index})">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-xs text-slate-400">🛣️ Street ${index + 1}</span>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-emerald-400 cl-coords-count" data-index="${index}">${coordsCount} pts</span>
+            <button type="button" onclick="event.stopPropagation(); removeCLRange(${index})" class="text-red-400 hover:text-red-300 text-xs">✕</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-4 gap-1">
+          <div class="col-span-4 relative">
+            <input type="text" name="clStreet_${index}" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" placeholder="Type street name..." value="${data?.street || ''}" onclick="event.stopPropagation()" oninput="searchCLStreet(${index}, this.value)" autocomplete="off">
+            <div id="clStreetSuggestions_${index}" class="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-32 overflow-y-auto hidden"></div>
+          </div>
+          <input type="number" name="clFrom_${index}" class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" placeholder="From №" value="${data?.from || ''}" onclick="event.stopPropagation()">
+          <input type="number" name="clTo_${index}" class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" placeholder="To №" value="${data?.to || ''}" onclick="event.stopPropagation()">
+          <select name="clState_${index}" class="col-span-2 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" onclick="event.stopPropagation()">
+            <option value="ok" ${data?.state === 'ok' ? 'selected' : ''}>OK</option>
+            <option value="warning" ${data?.state === 'warning' ? 'selected' : ''}>Warning</option>
+            <option value="critical" ${data?.state === 'critical' ? 'selected' : ''}>Critical</option>
+            <option value="offline" ${data?.state === 'offline' ? 'selected' : ''}>Offline</option>
+          </select>
+        </div>
+        <input type="hidden" name="clType_${index}" value="street">
+        <input type="hidden" name="clCoords_${index}" value='${JSON.stringify(data?.coords || [])}'>
+      </div>
+    `;
+  }
+
   container.insertAdjacentHTML('beforeend', rangeHtml);
 
   // Auto-select for drawing if map is ready
@@ -1387,43 +1467,144 @@ async function searchCLStreet(index, query) {
   }
 
   clStreetSearchTimeout = setTimeout(async () => {
-    const city = document.getElementById('epCity').value.trim();
-    let searchQuery = query;
-    if (city) searchQuery += ', ' + city.split(',')[0];
-
     try {
-      let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5&addressdetails=1`;
-      if (selectedCityBounds) url += `&viewbox=${selectedCityBounds.viewbox}&bounded=0`;
+      // Search for streets in Sofia using Nominatim
+      const searchQuery = `${query}, София, България`;
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=8&addressdetails=1&countrycodes=bg`;
 
-      const response = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+      const response = await fetch(url, { headers: { 'Accept-Language': 'bg,en' } });
       const results = await response.json();
 
-      if (results.length === 0) {
-        suggestionsDiv.innerHTML = '<div class="p-2 text-slate-500 text-xs">No results</div>';
+      // Filter to only show streets/roads
+      const streets = results.filter(place =>
+        place.type === 'residential' ||
+        place.type === 'primary' ||
+        place.type === 'secondary' ||
+        place.type === 'tertiary' ||
+        place.type === 'street' ||
+        place.class === 'highway' ||
+        place.address?.road
+      );
+
+      if (streets.length === 0) {
+        suggestionsDiv.innerHTML = '<div class="p-2 text-slate-500 text-xs">No streets found</div>';
         suggestionsDiv.classList.remove('hidden');
         return;
       }
 
-      suggestionsDiv.innerHTML = results.map(place => {
-        const streetName = place.address?.road || place.address?.pedestrian || place.address?.neighbourhood || place.display_name.split(',')[0];
-        return `<button type="button" class="w-full text-left p-2 hover:bg-slate-700 text-xs border-b border-slate-700/50 last:border-0" onclick="event.stopPropagation(); selectCLStreet(${index}, '${streetName.replace(/'/g, "\\'")}', ${place.lat}, ${place.lon})">
+      suggestionsDiv.innerHTML = streets.map(place => {
+        const streetName = place.address?.road || place.name || place.display_name.split(',')[0];
+        const osmId = place.osm_id;
+        const osmType = place.osm_type;
+        return `<button type="button" class="w-full text-left p-2 hover:bg-slate-700 text-xs border-b border-slate-700/50 last:border-0"
+          onclick="event.stopPropagation(); selectCLStreet(${index}, '${streetName.replace(/'/g, "\\'")}', ${place.lat}, ${place.lon}, '${osmType}', ${osmId})">
           <div class="text-white">${streetName}</div>
           <div class="text-slate-500 text-[10px] truncate">${place.display_name.split(',').slice(1, 3).join(',')}</div>
         </button>`;
       }).join('');
       suggestionsDiv.classList.remove('hidden');
     } catch (error) {
-      suggestionsDiv.innerHTML = '<div class="p-2 text-red-400 text-xs">Error</div>';
+      console.error('Street search error:', error);
+      suggestionsDiv.innerHTML = '<div class="p-2 text-red-400 text-xs">Error searching</div>';
       suggestionsDiv.classList.remove('hidden');
     }
   }, 400);
 }
 
-function selectCLStreet(index, streetName, lat, lon) {
+async function selectCLStreet(index, streetName, lat, lon, osmType, osmId) {
   document.querySelector(`[name="clStreet_${index}"]`).value = streetName;
   document.getElementById(`clStreetSuggestions_${index}`).classList.add('hidden');
-  if (epDrawMap) epDrawMap.setView([lat, lon], 17);
+
+  // Select this CL range for drawing
   selectCLRangeForDrawing(index);
+
+  // Try to fetch and draw the street geometry automatically
+  if (osmType && osmId) {
+    await fetchAndDrawStreetGeometry(index, streetName, osmType, osmId, lat, lon);
+  } else {
+    // Fallback - just center the map
+    if (epDrawMap) epDrawMap.setView([lat, lon], 17);
+  }
+}
+
+async function fetchAndDrawStreetGeometry(index, streetName, osmType, osmId, fallbackLat, fallbackLon) {
+  try {
+    // Use Overpass API to get street geometry
+    const typeMap = { way: 'way', relation: 'rel', node: 'node' };
+    const overpassType = typeMap[osmType] || 'way';
+
+    const overpassQuery = `
+      [out:json][timeout:10];
+      ${overpassType}(${osmId});
+      out geom;
+    `;
+
+    const response = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      body: `data=${encodeURIComponent(overpassQuery)}`
+    });
+
+    const data = await response.json();
+
+    if (data.elements && data.elements.length > 0) {
+      const element = data.elements[0];
+      let coords = [];
+
+      if (element.geometry) {
+        // Way with geometry
+        coords = element.geometry.map(pt => [pt.lat, pt.lon]);
+      } else if (element.members) {
+        // Relation - combine all way geometries
+        element.members.forEach(member => {
+          if (member.geometry) {
+            member.geometry.forEach(pt => coords.push([pt.lat, pt.lon]));
+          }
+        });
+      }
+
+      if (coords.length > 1) {
+        // Clear any existing drawing for this CL range
+        if (currentCLDrawing && selectedCLIndex === index) {
+          currentCLDrawing.clearLayers();
+        }
+
+        // Draw the street on the map
+        const polyline = L.polyline(coords, {
+          color: '#10b981',
+          weight: 6,
+          opacity: 0.8
+        });
+
+        if (currentCLDrawing) {
+          polyline.addTo(currentCLDrawing);
+        } else if (epDrawMap) {
+          polyline.addTo(epDrawMap);
+        }
+
+        // Store coordinates in hidden field
+        const coordsInput = document.querySelector(`[name="clCoords_${index}"]`);
+        if (coordsInput) {
+          coordsInput.value = JSON.stringify(coords);
+        }
+
+        // Fit map to show the street
+        if (epDrawMap) {
+          epDrawMap.fitBounds(polyline.getBounds(), { padding: [20, 20] });
+        }
+
+        console.log(`Auto-drew street "${streetName}" with ${coords.length} points`);
+        return;
+      }
+    }
+
+    // Fallback if no geometry found
+    if (epDrawMap) epDrawMap.setView([fallbackLat, fallbackLon], 17);
+    console.warn('No geometry found for street, manual drawing required');
+
+  } catch (error) {
+    console.error('Error fetching street geometry:', error);
+    if (epDrawMap) epDrawMap.setView([fallbackLat, fallbackLon], 17);
+  }
 }
 
 // Hide CL suggestions on outside click
@@ -1696,13 +1877,14 @@ function saveEPForm() {
   const lng = parseFloat(document.getElementById('epLng').value);
   const status = document.getElementById('epStatus').value;
 
-  // Collect CL ranges
+  // Collect CL ranges (both street and custom types)
   const clRanges = [];
   document.querySelectorAll('.cl-range').forEach(rangeEl => {
     const idx = rangeEl.dataset.index;
+    const type = document.querySelector(`[name="clType_${idx}"]`)?.value || 'street';
     const street = document.querySelector(`[name="clStreet_${idx}"]`)?.value;
-    const from = parseInt(document.querySelector(`[name="clFrom_${idx}"]`)?.value);
-    const to = parseInt(document.querySelector(`[name="clTo_${idx}"]`)?.value);
+    const from = parseInt(document.querySelector(`[name="clFrom_${idx}"]`)?.value) || 0;
+    const to = parseInt(document.querySelector(`[name="clTo_${idx}"]`)?.value) || 0;
     const state = document.querySelector(`[name="clState_${idx}"]`)?.value;
 
     let coords = [];
@@ -1715,8 +1897,16 @@ function saveEPForm() {
       }
     }
 
-    if (street && !isNaN(from) && !isNaN(to)) {
-      clRanges.push({ street, from, to, state, coords });
+    // For street type: require street name and from/to numbers
+    // For custom type: require either label or drawn coords
+    if (type === 'custom') {
+      if (street || coords.length > 0) {
+        clRanges.push({ type, street: street || 'Custom Route', from, to, state, coords });
+      }
+    } else {
+      if (street) {
+        clRanges.push({ type, street, from, to, state, coords });
+      }
     }
   });
 
