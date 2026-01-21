@@ -1086,12 +1086,25 @@ async function recalculateCoordinates() {
     return;
   }
 
-  // Build full address string
+  // Build full address string - optimized for Bulgarian addresses
   let fullAddress = '';
-  if (building) fullAddress += building + ' ';
-  if (address) fullAddress += address;
-  if (district) fullAddress += ', ' + district;
-  if (city) fullAddress += ', ' + city;
+
+  // For Bulgarian residential complexes (жк), format as "жк [district] блок [number]"
+  if (district && building) {
+    fullAddress = `жк ${district} блок ${building}, Sofia, Bulgaria`;
+  } else if (address && building) {
+    // Street address with building number
+    fullAddress = `${address} ${building}, ${district ? district + ', ' : ''}${city}`;
+  } else if (district) {
+    // Just district/area
+    fullAddress = `${district}, ${city}`;
+  } else {
+    // Fallback to basic format
+    if (building) fullAddress += 'блок ' + building + ', ';
+    if (address) fullAddress += address;
+    if (district) fullAddress += ', ' + district;
+    if (city) fullAddress += ', ' + city;
+  }
 
   // Show loading state
   const latInput = document.getElementById('epLat');
