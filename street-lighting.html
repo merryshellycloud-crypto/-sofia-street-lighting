@@ -1413,43 +1413,144 @@ async function searchCLStreet(index, query) {
   }
 
   clStreetSearchTimeout = setTimeout(async () => {
-    const city = document.getElementById('epCity').value.trim();
-    let searchQuery = query;
-    if (city) searchQuery += ', ' + city.split(',')[0];
-
     try {
-      let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5&addressdetails=1`;
-      if (selectedCityBounds) url += `&viewbox=${selectedCityBounds.viewbox}&bounded=0`;
+      // Search for streets in Sofia using Nominatim
+      const searchQuery = `${query}, София, България`;
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=8&addressdetails=1&countrycodes=bg`;
 
-      const response = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+      const response = await fetch(url, { headers: { 'Accept-Language': 'bg,en' } });
       const results = await response.json();
 
-      if (results.length === 0) {
-        suggestionsDiv.innerHTML = '<div class="p-2 text-slate-500 text-xs">No results</div>';
+      // Filter to only show streets/roads
+      const streets = results.filter(place =>
+        place.type === 'residential' ||
+        place.type === 'primary' ||
+        place.type === 'secondary' ||
+        place.type === 'tertiary' ||
+        place.type === 'street' ||
+        place.class === 'highway' ||
+        place.address?.road
+      );
+
+      if (streets.length === 0) {
+        suggestionsDiv.innerHTML = '<div class="p-2 text-slate-500 text-xs">No streets found</div>';
         suggestionsDiv.classList.remove('hidden');
         return;
       }
 
-      suggestionsDiv.innerHTML = results.map(place => {
-        const streetName = place.address?.road || place.address?.pedestrian || place.address?.neighbourhood || place.display_name.split(',')[0];
-        return `<button type="button" class="w-full text-left p-2 hover:bg-slate-700 text-xs border-b border-slate-700/50 last:border-0" onclick="event.stopPropagation(); selectCLStreet(${index}, '${streetName.replace(/'/g, "\\'")}', ${place.lat}, ${place.lon})">
+      suggestionsDiv.innerHTML = streets.map(place => {
+        const streetName = place.address?.road || place.name || place.display_name.split(',')[0];
+        const osmId = place.osm_id;
+        const osmType = place.osm_type;
+        return `<button type="button" class="w-full text-left p-2 hover:bg-slate-700 text-xs border-b border-slate-700/50 last:border-0"
+          onclick="event.stopPropagation(); selectCLStreet(${index}, '${streetName.replace(/'/g, "\\'")}', ${place.lat}, ${place.lon}, '${osmType}', ${osmId})">
           <div class="text-white">${streetName}</div>
           <div class="text-slate-500 text-[10px] truncate">${place.display_name.split(',').slice(1, 3).join(',')}</div>
         </button>`;
       }).join('');
       suggestionsDiv.classList.remove('hidden');
     } catch (error) {
-      suggestionsDiv.innerHTML = '<div class="p-2 text-red-400 text-xs">Error</div>';
+      console.error('Street search error:', error);
+      suggestionsDiv.innerHTML = '<div class="p-2 text-red-400 text-xs">Error searching</div>';
       suggestionsDiv.classList.remove('hidden');
     }
   }, 400);
 }
 
-function selectCLStreet(index, streetName, lat, lon) {
+async function selectCLStreet(index, streetName, lat, lon, osmType, osmId) {
   document.querySelector(`[name="clStreet_${index}"]`).value = streetName;
   document.getElementById(`clStreetSuggestions_${index}`).classList.add('hidden');
-  if (epDrawMap) epDrawMap.setView([lat, lon], 17);
+
+  // Select this CL range for drawing
   selectCLRangeForDrawing(index);
+
+  // Try to fetch and draw the street geometry automatically
+  if (osmType && osmId) {
+    await fetchAndDrawStreetGeometry(index, streetName, osmType, osmId, lat, lon);
+  } else {
+    // Fallback - just center the map
+    if (epDrawMap) epDrawMap.setView([lat, lon], 17);
+  }
+}
+
+async function fetchAndDrawStreetGeometry(index, streetName, osmType, osmId, fallbackLat, fallbackLon) {
+  try {
+    // Use Overpass API to get street geometry
+    const typeMap = { way: 'way', relation: 'rel', node: 'node' };
+    const overpassType = typeMap[osmType] || 'way';
+
+    const overpassQuery = `
+      [out:json][timeout:10];
+      ${overpassType}(${osmId});
+      out geom;
+    `;
+
+    const response = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      body: `data=${encodeURIComponent(overpassQuery)}`
+    });
+
+    const data = await response.json();
+
+    if (data.elements && data.elements.length > 0) {
+      const element = data.elements[0];
+      let coords = [];
+
+      if (element.geometry) {
+        // Way with geometry
+        coords = element.geometry.map(pt => [pt.lat, pt.lon]);
+      } else if (element.members) {
+        // Relation - combine all way geometries
+        element.members.forEach(member => {
+          if (member.geometry) {
+            member.geometry.forEach(pt => coords.push([pt.lat, pt.lon]));
+          }
+        });
+      }
+
+      if (coords.length > 1) {
+        // Clear any existing drawing for this CL range
+        if (currentCLDrawing && selectedCLIndex === index) {
+          currentCLDrawing.clearLayers();
+        }
+
+        // Draw the street on the map
+        const polyline = L.polyline(coords, {
+          color: '#10b981',
+          weight: 6,
+          opacity: 0.8
+        });
+
+        if (currentCLDrawing) {
+          polyline.addTo(currentCLDrawing);
+        } else if (epDrawMap) {
+          polyline.addTo(epDrawMap);
+        }
+
+        // Store coordinates in hidden field
+        const coordsInput = document.querySelector(`[name="clCoords_${index}"]`);
+        if (coordsInput) {
+          coordsInput.value = JSON.stringify(coords);
+        }
+
+        // Fit map to show the street
+        if (epDrawMap) {
+          epDrawMap.fitBounds(polyline.getBounds(), { padding: [20, 20] });
+        }
+
+        console.log(`Auto-drew street "${streetName}" with ${coords.length} points`);
+        return;
+      }
+    }
+
+    // Fallback if no geometry found
+    if (epDrawMap) epDrawMap.setView([fallbackLat, fallbackLon], 17);
+    console.warn('No geometry found for street, manual drawing required');
+
+  } catch (error) {
+    console.error('Error fetching street geometry:', error);
+    if (epDrawMap) epDrawMap.setView([fallbackLat, fallbackLon], 17);
+  }
 }
 
 // Hide CL suggestions on outside click
