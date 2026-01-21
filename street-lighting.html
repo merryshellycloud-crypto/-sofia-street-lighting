@@ -596,13 +596,29 @@ function initDashboardMap() {
 }
 
 function initMainMap() {
-  if (mainMap) { mainMap.invalidateSize(); return; }
-  
+  if (mainMap) {
+    mainMap.invalidateSize();
+    // Refresh markers for any new/updated cabinets
+    refreshMapMarkers();
+    renderCabinetList();
+    return;
+  }
+
   mainMap = L.map('mainMap').setView(MAP_CENTER, 14);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; CARTO'
   }).addTo(mainMap);
-  
+
+  refreshMapMarkers();
+  renderCabinetList();
+}
+
+function refreshMapMarkers() {
+  // Clear existing markers
+  markers.forEach(m => mainMap.removeLayer(m));
+  markers = [];
+
+  // Add markers for all cabinets
   cabinets.forEach(cab => {
     const marker = L.marker(cab.coords, { icon: createMarkerIcon(STATUS_COLORS[cab.status].hex) })
       .addTo(mainMap)
@@ -610,8 +626,6 @@ function initMainMap() {
     marker.cabinetId = cab.id;
     markers.push(marker);
   });
-  
-  renderCabinetList();
 }
 
 function renderCabinetList() {
